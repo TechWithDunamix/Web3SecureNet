@@ -1,15 +1,41 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, Wallet, ArrowRight } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { toast } from 'react-toastify';
 
 function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const { login, user } = useAuth();
+  const navigate = useNavigate();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard');
+    }
+  }, [user, navigate]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Login:', { email, password });
+    if (!email || !password) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await login(email, password);
+      navigate('/dashboard');
+    } catch (error) {
+      // Error handled in AuthContext
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -130,6 +156,7 @@ function Login() {
                       className="w-full bg-[#0a0a1f]/50 border border-purple-500/30 rounded-xl pl-12 pr-4 py-3 text-white placeholder-white/40 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
                       placeholder="Enter your email"
                       required
+                      disabled={loading}
                     />
                   </div>
                 </div>
@@ -148,11 +175,13 @@ function Login() {
                       className="w-full bg-[#0a0a1f]/50 border border-purple-500/30 rounded-xl pl-12 pr-12 py-3 text-white placeholder-white/40 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
                       placeholder="Enter your password"
                       required
+                      disabled={loading}
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute inset-y-0 right-0 pr-4 flex items-center text-purple-400 hover:text-purple-300 transition-colors"
+                      disabled={loading}
                     >
                       {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
@@ -165,6 +194,7 @@ function Login() {
                     <input
                       type="checkbox"
                       className="w-4 h-4 rounded border-purple-500/30 bg-[#0a0a1f]/50 text-purple-600 focus:ring-purple-500/20"
+                      disabled={loading}
                     />
                     <span className="text-white/70">Remember me</span>
                   </label>
@@ -176,10 +206,20 @@ function Login() {
                 {/* Submit Button */}
                 <button
                   type="submit"
-                  className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 rounded-xl transition-all duration-200 flex items-center justify-center space-x-2 glow-button group"
+                  disabled={loading}
+                  className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 text-white font-medium py-3 rounded-xl transition-all duration-200 flex items-center justify-center space-x-2 group"
                 >
-                  <span>Sign In</span>
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  {loading ? (
+                    <div className="flex items-center space-x-2">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                      <span>Signing In...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <span>Sign In</span>
+                      <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                    </>
+                  )}
                 </button>
               </form>
 

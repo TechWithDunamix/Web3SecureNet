@@ -1,27 +1,72 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, Wallet, ArrowRight, User, Shield } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { toast } from 'react-toastify';
 
 function Signup() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    name: '',
+    first_name: '',
+    last_name: '',
     email: '',
     password: '',
     confirmPassword: ''
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('Signup:', formData);
-  };
+  const { signup, user } = useAuth();
+  const navigate = useNavigate();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard');
+    }
+  }, [user, navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Validation
+    if (!formData.first_name || !formData.last_name || !formData.email || !formData.password || !formData.confirmPassword) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+
+    if (formData.password.length < 8) {
+      toast.error('Password must be at least 8 characters long');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await signup({
+        email: formData.email,
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        password: formData.password,
+        password_confirm: formData.confirmPassword,
+      });
+      navigate('/dashboard');
+    } catch (error) {
+      // Error handled in AuthContext
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -144,12 +189,33 @@ function Signup() {
                     </div>
                     <input
                       type="text"
-                      name="name"
-                      value={formData.name}
+                      name="first_name"
+                      value={formData.first_name}
                       onChange={handleChange}
                       className="w-full bg-[#0a0a1f]/50 border border-purple-500/30 rounded-xl pl-12 pr-4 py-3 text-white placeholder-white/40 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
-                      placeholder="Enter your full name"
+                      placeholder="Enter your first name"
                       required
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
+
+                {/* Last Name Input */}
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-white/80">Last Name</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <User className="w-5 h-5 text-purple-400" />
+                    </div>
+                    <input
+                      type="text"
+                      name="last_name"
+                      value={formData.last_name}
+                      onChange={handleChange}
+                      className="w-full bg-[#0a0a1f]/50 border border-purple-500/30 rounded-xl pl-12 pr-4 py-3 text-white placeholder-white/40 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
+                      placeholder="Enter your last name"
+                      required
+                      disabled={loading}
                     />
                   </div>
                 </div>
@@ -169,6 +235,7 @@ function Signup() {
                       className="w-full bg-[#0a0a1f]/50 border border-purple-500/30 rounded-xl pl-12 pr-4 py-3 text-white placeholder-white/40 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
                       placeholder="Enter your email"
                       required
+                      disabled={loading}
                     />
                   </div>
                 </div>
@@ -188,11 +255,13 @@ function Signup() {
                       className="w-full bg-[#0a0a1f]/50 border border-purple-500/30 rounded-xl pl-12 pr-12 py-3 text-white placeholder-white/40 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
                       placeholder="Create a password"
                       required
+                      disabled={loading}
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute inset-y-0 right-0 pr-4 flex items-center text-purple-400 hover:text-purple-300 transition-colors"
+                      disabled={loading}
                     >
                       {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
@@ -214,11 +283,13 @@ function Signup() {
                       className="w-full bg-[#0a0a1f]/50 border border-purple-500/30 rounded-xl pl-12 pr-12 py-3 text-white placeholder-white/40 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
                       placeholder="Confirm your password"
                       required
+                      disabled={loading}
                     />
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                       className="absolute inset-y-0 right-0 pr-4 flex items-center text-purple-400 hover:text-purple-300 transition-colors"
+                      disabled={loading}
                     >
                       {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
@@ -231,6 +302,7 @@ function Signup() {
                     type="checkbox"
                     className="w-4 h-4 mt-1 rounded border-purple-500/30 bg-[#0a0a1f]/50 text-purple-600 focus:ring-purple-500/20"
                     required
+                    disabled={loading}
                   />
                   <label className="text-sm text-white/70">
                     I agree to the{' '}
@@ -247,10 +319,20 @@ function Signup() {
                 {/* Submit Button */}
                 <button
                   type="submit"
-                  className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 rounded-xl transition-all duration-200 flex items-center justify-center space-x-2 glow-button group"
+                  disabled={loading}
+                  className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 text-white font-medium py-3 rounded-xl transition-all duration-200 flex items-center justify-center space-x-2 glow-button group"
                 >
-                  <span>Create Account</span>
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  {loading ? (
+                    <div className="flex items-center space-x-2">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                      <span>Creating Account...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <span>Create Account</span>
+                      <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                    </>
+                  )}
                 </button>
               </form>
 

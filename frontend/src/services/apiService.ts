@@ -1,5 +1,16 @@
-// Dummy data service that mimics the API responses
-// This simulates the API endpoints without making actual HTTP requests
+import api from './api';
+
+// API Base URL - Update this to match your backend server
+const API_BASE_URL = 'http://localhost:8000/api';
+
+// Helper function to get auth headers (keeping for backward compatibility)
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('access_token');
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+  };
+};
 
 export interface User {
   id: number;
@@ -10,13 +21,15 @@ export interface User {
 
 export interface Profile {
   id: number;
-  user: User;
-  id_card_front_url?: string;
-  id_card_back_url?: string;
-  full_name: string;
   email: string;
+  first_name: string;
+  last_name: string;
   address?: string;
   verified: boolean;
+  wallet_name?: string;
+  wallet_number?: string;
+  date_joined: string;
+  last_login: string | null;
 }
 
 export interface Asset {
@@ -87,11 +100,15 @@ export const DUMMY_USER: User = {
 
 export const DUMMY_PROFILE: Profile = {
   id: 1,
-  user: DUMMY_USER,
-  full_name: "John Doe",
   email: "john.doe@example.com",
+  first_name: "John",
+  last_name: "Doe",
   address: "123 Main St, New York, NY 10001",
-  verified: true
+  verified: true,
+  wallet_name: "MetaMask",
+  wallet_number: "0x742d35Cc6634C0532925a3b8D5A4e4f4E1B7f8D8",
+  date_joined: "2024-01-01T00:00:00Z",
+  last_login: "2024-01-15T10:30:00Z"
 };
 
 export const DUMMY_ASSETS: Asset[] = [
@@ -253,36 +270,107 @@ export const DUMMY_SWAPS: Swap[] = [
   }
 ];
 
-// API simulation functions
+// API service functions using axios
 export const apiService = {
   // Authentication
   async login(credentials: { username: string; password: string }) {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      const response = await api.post('/auth/login/', {
+        email: credentials.username,
+        password: credentials.password
+      });
 
-    if (credentials.username === "demo@example.com" && credentials.password === "password") {
+      // Store tokens in localStorage
+      if (response.data.tokens) {
+        localStorage.setItem('access_token', response.data.tokens.access);
+        localStorage.setItem('refresh_token', response.data.tokens.refresh);
+      }
+
       return {
-        token: "dummy_jwt_token_here",
-        user: DUMMY_USER
+        token: response.data.tokens?.access,
+        user: response.data.user
       };
+    } catch (error) {
+      console.error('Failed to login:', error);
+      throw error;
     }
-    throw new Error("Invalid credentials");
   },
 
   async logout() {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return { success: true };
+    try {
+      const response = await api.post('/auth/logout/');
+
+      // Clear tokens from localStorage
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+
+      return { success: true };
+    } catch (error) {
+      console.error('Failed to logout:', error);
+      return { success: false };
+    }
   },
 
   // Profile endpoints
   async getProfile() {
-    await new Promise(resolve => setTimeout(resolve, 800));
-    return DUMMY_PROFILE;
+    try {
+      const response = await api.get('/profile/');
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch profile from backend, using dummy data:', error);
+      // Fallback to dummy data if backend is not available
+      return DUMMY_PROFILE;
+    }
   },
 
-  async updateProfile(data: Partial<Profile>) {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    return { ...DUMMY_PROFILE, ...data };
+  async updateProfile(data: { first_name?: string; last_name?: string; address?: string; wallet_name?: string; wallet_number?: string }) {
+    try {
+      const response = await api.put('/profile/edit/', data);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to update profile:', error);
+      throw error;
+    }
+  },
+
+  // Wallet endpoints
+  async getWalletStatus() {
+    try {
+      const response = await api.get('/wallet/status/');
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch wallet status from backend, using fallback:', error);
+      // Fallback to check if user has wallet data
+      const profile = await this.getProfile();
+      return {
+        wallet_connected: Boolean(profile.wallet_name && profile.wallet_number),
+        wallet: {
+          id: profile.id,
+          wallet_name: profile.wallet_name,
+          wallet_number: profile.wallet_number
+        }
+      };
+    }
+  },
+
+  async connectWallet(data: { wallet_name: string; wallet_number: string }) {
+    try {
+      const response = await api.post('/wallet/connect/', data);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to connect wallet:', error);
+      throw error;
+    }
+  },
+
+  async disconnectWallet() {
+    try {
+      const response = await api.delete('/wallet/disconnect/');
+      return response.data;
+    } catch (error) {
+      console.error('Failed to disconnect wallet:', error);
+      throw error;
+    }
   },
 
   // Assets endpoints
@@ -319,7 +407,7 @@ export const apiService = {
     return DUMMY_WALLETS;
   },
 
-  async connectWallet(data: Omit<Wallet, 'id' | 'user'>) {
+  async createDummyWallet(data: Omit<Wallet, 'id' | 'user'>) {
     await new Promise(resolve => setTimeout(resolve, 1500));
     const newWallet: Wallet = {
       id: Math.max(...DUMMY_WALLETS.map(w => w.id)) + 1,
