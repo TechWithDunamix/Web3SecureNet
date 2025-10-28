@@ -54,14 +54,34 @@ export interface Investment {
 }
 
 export interface Transaction {
-  id: number;
-  type: 'deposit' | 'withdrawal' | 'investment' | 'swap' | 'transfer';
+  id: string;
+  transaction_id: string;
+  user: number;
+  type: 'deposit' | 'withdrawal' | 'transfer' | 'swap' | 'investment';
+  status: 'pending' | 'completed' | 'cancelled' | 'failed';
   amount: number;
-  currency: string;
-  status: 'completed' | 'pending' | 'failed';
+  asset_type: 'BTC' | 'ETH' | 'USDT' | 'USDC' | 'SOL' | 'XRP' | 'DOGE' | 'TRX' | 'OTHER';
+  from_address?: string;
+  to_address?: string;
+  fee?: number;
   created_at: string;
-  transaction_hash?: string;
-  description?: string;
+  updated_at: string;
+  deposit?: Deposit;
+}
+
+export interface Deposit {
+  id: number;
+  transaction: string;
+  deposit_address: string;
+  tx_hash?: string;
+  required_confirmations: number;
+  confirmed_blocks: number;
+  is_approved: boolean;
+  approved_by?: number;
+  approved_at?: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Wallet {
@@ -458,12 +478,45 @@ export const apiService = {
   },
 
   async verifyOTP(data: { otp: string }) {
-    await new Promise(resolve => setTimeout(resolve, 800));
-    if (data.otp === "123456") {
-      return { verified: true };
-    }
-    throw new Error("Invalid OTP");
-  }
+    return api.post('/auth/verify-otp/', data);
+  },
+
+  // Deposit endpoints
+  deposit: {
+    createDeposit: async (data: {
+      asset_type: string;
+      amount: number;
+      tx_hash?: string;
+      from_address?: string;
+    }) => {
+      return api.post('/deposits/', data);
+    },
+
+    getDeposits: async () => {
+      return api.get('/deposits/lists/');
+    },
+
+    getDeposit: async (depositId: string) => {
+      return api.get(`/transactions/deposits/${depositId}/`);
+    },
+
+    updateDepositHash: async (depositId: string, txHash: string) => {
+      return api.patch(`/transactions/deposits/${depositId}/`, { tx_hash: txHash });
+    },
+
+    updateDepositConfirmations: async (depositId: string, confirmedBlocks: number) => {
+      return api.post(`/transactions/deposits/${depositId}/confirmations/`, { confirmed_blocks: confirmedBlocks });
+    },
+  },
+
+  // Transaction endpoints
+  transaction: {
+    getTransactions: async () => {
+      return api.get('/transactions/');
+    },
+
+    getTransaction: async (txId: string) => {
+      return api.get(`/transactions/${txId}/`);
+    },
+  },
 };
-
-

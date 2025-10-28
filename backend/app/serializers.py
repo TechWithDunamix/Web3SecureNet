@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import authenticate
-from .models import User
+from .models import User, Transaction, Deposit, TransactionStatus, TransactionType, AssetType
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
@@ -104,5 +104,107 @@ class WalletStatusSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = User
-        fields = ('id', 'wallet_name', 'wallet_number')
-        read_only_fields = ('id',)
+        fields = ('wallet_name', 'wallet_number', 'is_wallet_connected')
+        read_only_fields = ('is_wallet_connected',)
+
+
+class TransactionSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Transaction model
+    """
+    transaction_type = serializers.ChoiceField(choices=TransactionType.choices)
+    status = serializers.ChoiceField(choices=TransactionStatus.choices, read_only=True)
+    asset_type = serializers.ChoiceField(choices=AssetType.choices)
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    user_email = serializers.EmailField(source='user.email', read_only=True)
+    
+    class Meta:
+        model = Transaction
+        fields = [
+            'id', 'transaction_id', 'transaction_type', 'status', 'amount', 'asset_type',
+            'from_address', 'to_address', 'fee', 'network_fee', 'metadata',
+            'created_at', 'updated_at', 'completed_at', 'user', 'user_email'
+        ]
+        read_only_fields = ('transaction_id', 'created_at', 'updated_at', 'completed_at')
+
+    def create(self, validated_data):
+        # Generate a unique transaction ID
+        import uuid
+        validated_data['transaction_id'] = f"tx_{uuid.uuid4().hex[:16]}"
+        return super().create(validated_data)
+
+
+class DepositCreateSerializer(serializers.Serializer):
+    amount = serializers.DecimalField(
+        max_digits=36,
+        decimal_places=18,
+    )
+    asset_type = serializers.ChoiceField(choices=AssetType.choices)
+    deposit_address = serializers.CharField(
+        max_length=255,
+    )
+    tx_hash = serializers.CharField(
+        max_length=255,
+        allow_blank=True,
+        required = False
+    )
+    
+
+class DepositSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Deposit model
+    """
+    is_approved = serializers.BooleanField(read_only=True)
+    approved_by = serializers.StringRelatedField(read_only=True)
+    required_confirmations = serializers.IntegerField(read_only=True)
+    
+    created_at = serializers.DateTimeField(source='transaction.created_at', read_only=True)
+    updated_at = serializers.DateTimeField(source='transaction.updated_at', read_only=True)
+    
+    class Meta:
+        model = Deposit
+        fields = [
+            'id', 'transaction', 'deposit_address', 'tx_hash', 'confirmed_blocks',
+            'required_confirmations', 'is_approved', 'approved_by', 'approved_at',
+            'notes', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ('created_at', 'updated_at', 'approved_at')
+    
+    def create(self, validated_data):
+        transaction_data = validated_data.pop('transaction')
+        transaction_serializer = TransactionSerializer(data=transaction_data)
+        transaction_serializer.is_valid(raise_exception=True)
+        transaction = transaction_serializer.save()
+        
+        # Set default required confirmations based on asset type
+        asset_type = transaction.asset_type
+        required_confirmations = {
+            'BTC': 3,
+            'ETH': 12,
+            'TRX': 20,
+            'SOL': 32,
+            'XRP': 35,
+            'USDT': 12,  # Assuming ERC20
+            'USDC': 12,  # Assuming ERC20
+            'OTHER': 10
+        }
+        
+        deposit = Deposit.objects.create(
+            transaction=transaction,
+            required_confirmations=required_confirmations.get(asset_type, 10),
+            **validated_data
+        )
+        return deposit
+
+
+class AdminDepositApprovalSerializer(serializers.Serializer):
+    """
+    Serializer for admin deposit approval
+    """
+    is_approved = serializers.BooleanField(required=True)
+    notes = serializers.CharField(required=False, allow_blank=True)
+
+    def validate(self, attrs):
+        if attrs.get('is_approved') is None:
+            raise serializers.ValidationError("is_approved field is required")
+        return attrs

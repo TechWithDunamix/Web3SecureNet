@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { X, Copy, ArrowRight, Check, Loader2 } from 'lucide-react';
+import { X, Copy, Check, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { coinGeckoService } from '../../services/coinGeckoService';
+import { apiService } from '../../services/apiService';
+import { toast } from 'sonner';
 
 interface DepositAddress {
   id: string;
@@ -21,7 +23,7 @@ const depositAddresses: DepositAddress[] = [
     icon: '₿',
     protocol: 'Native SegWit (Bech32)',
     minDeposit: 0.001,
-    fee: '0.0005 BTC'
+    fee: '0.0005 BTC',
   },
   {
     id: 'eth',
@@ -30,7 +32,7 @@ const depositAddresses: DepositAddress[] = [
     icon: 'Ξ',
     protocol: 'ERC20',
     minDeposit: 0.01,
-    fee: '0.003 ETH'
+    fee: '0.003 ETH',
   },
   {
     id: 'trx',
@@ -77,15 +79,26 @@ interface DepositModalProps {
   onClose: () => void;
 }
 
+const assetTypeMap: Record<string, string> = {
+  btc: 'BTC',
+  eth: 'ETH',
+  trx: 'TRX',
+  sol: 'SOL',
+  xrp: 'XRP',
+  doge: 'DOGE',
+};
+
 export function DepositModal({ isOpen, onClose }: DepositModalProps) {
   const [selectedAsset, setSelectedAsset] = useState<DepositAddress | null>(null);
   const [amount, setAmount] = useState('');
   const [cryptoAmount, setCryptoAmount] = useState('');
   const [isLoadingPrice, setIsLoadingPrice] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [transactionHash, setTransactionHash] = useState('');
   const [copied, setCopied] = useState(false);
   const [copiedHash, setCopiedHash] = useState(false);
   const [step, setStep] = useState(1);
+  const [error, setError] = useState('');
 
   const handleCopy = (text: string, type: 'address' | 'hash' = 'address') => {
     navigator.clipboard.writeText(text);
@@ -106,14 +119,13 @@ export function DepositModal({ isOpen, onClose }: DepositModalProps) {
 
     try {
       setIsLoadingPrice(true);
-      // Map our internal asset IDs to CoinGecko IDs
       const coinIdMap: Record<string, string> = {
         btc: 'bitcoin',
         eth: 'ethereum',
         trx: 'tron',
         sol: 'solana',
         xrp: 'ripple',
-        doge: 'dogecoin'
+        doge: 'dogecoin',
       };
 
       const coinId = coinIdMap[selectedAsset.id];
@@ -122,8 +134,6 @@ export function DepositModal({ isOpen, onClose }: DepositModalProps) {
       const price = await coinGeckoService.getCoinPrice(coinId, 'usd');
       const usdValue = parseFloat(usdAmount);
       const cryptoValue = usdValue / price[coinId].usd;
-      
-      // Format based on the cryptocurrency (more decimals for smaller units)
       const decimals = ['btc', 'eth'].includes(selectedAsset.id) ? 8 : 4;
       setCryptoAmount(cryptoValue.toFixed(decimals));
     } catch (error) {
@@ -147,27 +157,46 @@ export function DepositModal({ isOpen, onClose }: DepositModalProps) {
   const handleAmountSelect = async (selectedAmount: number) => {
     const amountStr = selectedAmount.toString();
     setAmount(amountStr);
-    if (selectedAsset) {
-      await updateCryptoAmount(amountStr);
-    }
+    if (selectedAsset) await updateCryptoAmount(amountStr);
   };
 
-  // Update crypto amount when asset changes and amount exists
   useEffect(() => {
-    if (selectedAsset && amount) {
-      updateCryptoAmount(amount);
-    }
+    if (selectedAsset && amount) updateCryptoAmount(amount);
   }, [selectedAsset?.id]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle deposit submission
-    console.log('Deposit submitted:', { 
-      asset: selectedAsset, 
-      amount,
-      transactionHash: transactionHash || 'Not provided'
-    });
-    // Here you would typically make an API call
+    if (!selectedAsset || !amount) return;
+
+    try {
+      setIsSubmitting(true);
+      setError('');
+
+      const depositData = {
+        asset_type: assetTypeMap[selectedAsset.id] || 'OTHER',
+        amount: parseFloat(amount),
+        tx_hash: transactionHash || undefined,
+        deposit_address: selectedAsset?.address
+      };
+
+      await apiService.deposit.createDeposit(depositData);
+
+      toast.success('Deposit request submitted successfully!', {
+        description:
+          "Your deposit is being processed. You'll be notified once it's confirmed.",
+      });
+
+      resetForm();
+      onClose();
+    } catch (err: any) {
+      console.error('Error submitting deposit:', err);
+      const errorMessage =
+        err.response?.data?.detail || 'Failed to submit deposit. Please try again.';
+      setError(errorMessage);
+      toast.error('Deposit failed', { description: errorMessage });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const resetForm = () => {
@@ -178,224 +207,204 @@ export function DepositModal({ isOpen, onClose }: DepositModalProps) {
   };
 
   useEffect(() => {
-    if (!isOpen) {
-      // Reset form when modal is closed
-      resetForm();
-    }
+    if (!isOpen) resetForm();
   }, [isOpen]);
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 20 }}
-        className="relative w-full max-w-md bg-[#1a1a3e] border border-purple-500/30 rounded-xl p-6 mx-4 overflow-hidden"
+    <div
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-md overflow-hidden relative"
+        onClick={(e) => e.stopPropagation()}
       >
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-white/60 hover:text-white transition-colors"
-        >
-          <X size={24} />
-        </button>
-        
-        <AnimatePresence mode="wait">
-          {step === 1 ? (
-            <motion.div
-              key="step1"
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 10 }}
-              className="space-y-6"
-            >
-              <h3 className="text-xl font-bold text-center mb-2">Select Asset to Deposit</h3>
-              <p className="text-sm text-white/60 text-center mb-6">Choose the cryptocurrency you want to deposit</p>
-              
-              <div className="space-y-3">
-                {depositAddresses.map((asset) => (
-                  <motion.button
-                    key={asset.id}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => {
-                      setSelectedAsset(asset);
-                      setStep(2);
-                    }}
-                    className="w-full flex items-center justify-between p-4 bg-[#252550] hover:bg-[#2d2d6d] rounded-lg transition-colors"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center text-xl">
-                        {asset.icon}
-                      </div>
-                      <div className="text-left">
-                        <div className="font-medium">{asset.network}</div>
-                        <div className="text-xs text-white/60">{asset.protocol}</div>
-                      </div>
-                    </div>
-                    <ArrowRight className="w-5 h-5 text-white/60" />
-                  </motion.button>
-                ))}
-              </div>
-            </motion.div>
-          ) : (
-            <motion.form
-              key="step2"
-              initial={{ opacity: 0, x: 10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -10 }}
-              onSubmit={handleSubmit}
-              className="space-y-6"
-            >
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="text-xl font-bold">Deposit {selectedAsset?.network}</h3>
-                  <button
-                    type="button"
-                    onClick={() => setStep(1)}
-                    className="text-sm text-purple-400 hover:text-purple-300"
-                  >
-                    ← Back
-                  </button>
-                </div>
-                <p className="text-sm text-white/60 mb-6">Send only {selectedAsset?.network} to this deposit address</p>
-                
-                <div className="bg-[#252550] rounded-lg p-4 mb-6">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm text-white/60">Network</span>
-                    <span className="font-medium">{selectedAsset?.network} ({selectedAsset?.protocol})</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-white/60">Minimum deposit</span>
-                    <span className="font-medium">{selectedAsset?.minDeposit} {selectedAsset?.id.toUpperCase()}</span>
-                  </div>
-                </div>
+        {isSubmitting && (
+          <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-10">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg flex flex-col items-center">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-500 mb-4" />
+              <p className="text-gray-700 dark:text-gray-300">
+                Processing your deposit...
+              </p>
+            </div>
+          </div>
+        )}
 
-                <div className="mb-6">
-                  <label className="block text-sm font-medium mb-2" htmlFor="amount">
-                    Amount (USD)
-                  </label>
-                  <div className="relative">
-                    <div className="relative">
-                      <input
-                        id="amount"
-                        type="number"
-                        value={amount}
-                        onChange={handleAmountChange}
-                        placeholder="0.00"
-                        step="0.01"
-                        min={0}
-                        className="w-full bg-[#252550] border border-purple-500/30 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 pr-24"
-                        required
-                      />
-                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                        <span className="text-white/60 text-sm">USD</span>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 20 }}
+          className="relative w-full max-w-md bg-[#1a1a3e] border border-purple-500/30 rounded-xl p-6 mx-4 overflow-hidden"
+        >
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 text-white/60 hover:text-white transition-colors"
+          >
+            <X size={24} />
+          </button>
+
+          <AnimatePresence mode="wait">
+            {step === 1 ? (
+              <motion.div
+                key="step1"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                className="space-y-6"
+              >
+                <h3 className="text-xl font-bold text-center mb-2">
+                  Select Asset to Deposit
+                </h3>
+                <p className="text-sm text-white/60 text-center mb-6">
+                  Choose the cryptocurrency you want to deposit
+                </p>
+
+                <div className="space-y-3">
+                  {depositAddresses.map((asset) => (
+                    <motion.button
+                      key={asset.id}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => {
+                        setSelectedAsset(asset);
+                        setStep(2);
+                      }}
+                      className="w-full flex items-center justify-between p-4 bg-[#252550] hover:bg-[#2d2d6d] rounded-lg transition-colors"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center text-xl">
+                          {asset.icon}
+                        </div>
+                        <div className="text-left">
+                          <div className="font-medium">{asset.network}</div>
+                          <div className="text-xs text-white/60">
+                            {asset.protocol}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                    
-                    {(amount && cryptoAmount && !isLoadingPrice) && (
-                      <div className="mt-2 text-sm text-white/70 flex items-center">
-                        <span>≈ {cryptoAmount} {selectedAsset?.id.toUpperCase()}</span>
-                        <span className="mx-2 text-white/40">•</span>
-                        <span className="text-xs text-white/50">
-                          1 {selectedAsset?.id.toUpperCase()} = ${(parseFloat(amount) / parseFloat(cryptoAmount)).toFixed(2)}
+                      <div className="flex flex-col items-end">
+                        <span className="text-sm text-white/60">
+                          Minimum deposit
+                        </span>
+                        <span className="font-medium">
+                          {asset.minDeposit} {asset.id.toUpperCase()}
                         </span>
                       </div>
-                    )}
-                    
-                    {isLoadingPrice && (
-                      <div className="mt-2 text-sm text-white/60 flex items-center">
-                        <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                        <span>Fetching price...</span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="flex flex-wrap gap-2 mt-3">
-                    {predefinedAmounts.map((amt) => (
-                      <button
-                        key={amt}
-                        type="button"
-                        onClick={() => handleAmountSelect(amt)}
-                        className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
-                          amount === amt.toString()
-                            ? 'bg-purple-600 text-white'
-                            : 'bg-[#252550] hover:bg-[#2d2d6d] text-white/80'
-                        }`}
-                      >
-                        ${amt}
-                      </button>
-                    ))}
-                  </div>
+                    </motion.button>
+                  ))}
+                </div>
+              </motion.div>
+            ) : (
+              <motion.form
+                key="step2"
+                onSubmit={handleSubmit}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                className="space-y-6"
+              >
+                <h3 className="text-xl font-bold text-center mb-2">
+                  Deposit {selectedAsset?.network}
+                </h3>
+                <p className="text-sm text-white/60 text-center mb-6">
+                  Enter amount and confirm deposit
+                </p>
+
+                <div className="space-y-4">
+                  <label className="block text-sm font-medium mb-1">
+                    Amount (USD)
+                  </label>
+                  <input
+                    type="number"
+                    value={amount}
+                    onChange={handleAmountChange}
+                    placeholder="0.00"
+                    step="0.01"
+                    min={0}
+                    className="w-full bg-[#252550] border border-purple-500/30 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 pr-24"
+                    required
+                  />
+
+                  {isLoadingPrice ? (
+                    <div className="mt-2 text-sm text-white/60 flex items-center">
+                      <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                      <span>Fetching price...</span>
+                    </div>
+                  ) : (
+                    cryptoAmount && (
+                      <p className="mt-2 text-sm text-white/70">
+                        ≈ {cryptoAmount} {selectedAsset?.id.toUpperCase()}
+                      </p>
+                    )
+                  )}
                 </div>
 
-                <div className="mb-6">
-                  <div className="flex justify-between items-center mb-2">
-                    <label className="text-sm font-medium">Deposit Address</label>
-                    <span className="text-xs text-white/60">Fee: {selectedAsset?.fee}</span>
-                  </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Deposit Address</label>
                   <div className="relative">
                     <div className="bg-[#252550] border border-purple-500/30 rounded-lg px-4 py-3 pr-12 text-sm font-mono overflow-x-auto">
                       {selectedAsset?.address}
                     </div>
                     <button
                       type="button"
-                      onClick={() => selectedAsset && handleCopy(selectedAsset.address)}
+                      onClick={() =>
+                        selectedAsset && handleCopy(selectedAsset.address)
+                      }
                       className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-white/60 hover:text-white transition-colors"
                       title="Copy to clipboard"
                     >
-                      {copied ? <Check size={18} className="text-green-400" /> : <Copy size={18} />}
+                      {copied ? (
+                        <Check size={18} className="text-green-400" />
+                      ) : (
+                        <Copy size={18} />
+                      )}
                     </button>
                   </div>
                   <p className="mt-2 text-xs text-yellow-400">
-                    ⚠️ Only send {selectedAsset?.network} to this address. Sending other assets may result in permanent loss.
+                    ⚠️ Only send {selectedAsset?.network} to this address.
                   </p>
                 </div>
-              </div>
 
-              <div className="space-y-4">
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium" htmlFor="txHash">
+                  <label className="block text-sm font-medium">
                     Transaction Hash (Optional)
                   </label>
-                  <div className="relative">
-                    <input
-                      id="txHash"
-                      type="text"
-                      value={transactionHash}
-                      onChange={(e) => setTransactionHash(e.target.value)}
-                      placeholder="Paste your transaction hash here"
-                      className="w-full bg-[#252550] border border-purple-500/30 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    />
-                    {transactionHash && (
-                      <button
-                        type="button"
-                        onClick={() => handleCopy(transactionHash, 'hash')}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-white/60 hover:text-white transition-colors"
-                        title="Copy hash"
-                      >
-                        {copiedHash ? <Check size={18} className="text-green-400" /> : <Copy size={18} />}
-                      </button>
-                    )}
-                  </div>
-                  <p className="text-xs text-white/60">
-                    Adding a transaction hash helps us track your deposit faster.
-                  </p>
+                  <input
+                    type="text"
+                    value={transactionHash}
+                    onChange={(e) => setTransactionHash(e.target.value)}
+                    placeholder="Paste your transaction hash here"
+                    className="w-full bg-[#252550] border border-purple-500/30 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
                 </div>
 
-                <button
-                  type="submit"
-                  className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white py-3 px-6 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={!amount || parseFloat(amount) <= 0}
-                >
-                  Confirm Deposit
-                </button>
-              </div>
-            </motion.form>
-          )}
-        </AnimatePresence>
-      </motion.div>
+                {error && (
+                  <p className="text-sm text-red-400 text-center">{error}</p>
+                )}
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setStep(1)}
+                    className="flex-1 bg-[#252550] hover:bg-[#2d2d6d] text-white py-3 rounded-lg"
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!amount || parseFloat(amount) <= 0 || isSubmitting}
+                    className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white py-3 px-6 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSubmitting ? 'Submitting...' : 'Confirm Deposit'}
+                  </button>
+                </div>
+              </motion.form>
+            )}
+          </AnimatePresence>
+        </motion.div>
+      </div>
     </div>
   );
 }

@@ -9,7 +9,15 @@ from .views import (
     UserProfileUpdateView,
     wallet_status_view,
     wallet_connect_view,
-    wallet_disconnect_view
+    wallet_disconnect_view,
+    transaction_list_create_view,
+    transaction_detail_view,
+    create_deposit_view,
+    list_deposits_view,
+    deposit_detail_view,
+    update_deposit_confirmations,
+    admin_list_pending_deposits,
+    admin_approve_deposit
 )
 
 app_name = 'app'
@@ -29,4 +37,18 @@ urlpatterns = [
     path('wallet/status/', wallet_status_view, name='wallet-status'),
     path('wallet/connect/', wallet_connect_view, name='wallet-connect'),
     path('wallet/disconnect/', wallet_disconnect_view, name='wallet-disconnect'),
+    
+    # Transaction endpoints
+    path('transactions/', transaction_list_create_view, name='transaction-list'),
+    path('transactions/<str:tx_id>/', transaction_detail_view, name='transaction-detail'),
+    
+    # Deposit endpoints
+    path('deposits/', create_deposit_view, name='deposit-create'),
+    path('deposits/list/', list_deposits_view, name='deposit-list'),
+    path('deposits/<int:deposit_id>/', deposit_detail_view, name='deposit-detail'),
+    path('deposits/<int:deposit_id>/confirmations/', update_deposit_confirmations, name='deposit-update-confirmations'),
+    
+    # Admin endpoints
+    path('admin/deposits/pending/', admin_list_pending_deposits, name='admin-deposit-pending'),
+    path('admin/deposits/<int:deposit_id>/approve/', admin_approve_deposit, name='admin-deposit-approve'),
 ]
