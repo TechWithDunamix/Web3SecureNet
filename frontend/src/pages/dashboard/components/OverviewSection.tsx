@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, Wallet, LayoutDashboard } from 'lucide-react';
+import { TrendingUp, Wallet, LayoutDashboard, Plus, ArrowDownToLine, ArrowUpToLine, RefreshCw, CreditCard } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { DepositModal } from '../../../components/modals/DepositModal';
 import { type Transaction } from '../../../services/apiService';
 import { CoinCarousel } from './CoinCarousel';
 import { CoinOverviewBoard } from './CoinOverviewBoard';
@@ -11,6 +13,7 @@ interface OverviewSectionProps {
 }
 
 export function OverviewSection({ stats, recentTransactions }: OverviewSectionProps) {
+  const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
   const [coins, setCoins] = useState<CoinGeckoCoin[]>([]);
 
   useEffect(() => {
@@ -28,7 +31,59 @@ export function OverviewSection({ stats, recentTransactions }: OverviewSectionPr
 
   return (
     <div className="space-y-6">
-      <h2 className="text-3xl font-bold mb-8">Overview</h2>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+        <h2 className="text-3xl font-bold mb-4 md:mb-0">Overview</h2>
+        
+        {/* Action Buttons */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 w-full md:w-auto">
+          <motion.a
+            href="https://www.moonpay.com/buy"
+            target="_blank"
+            rel="noopener noreferrer"
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.98 }}
+            className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-4 py-2 rounded-lg flex items-center justify-center space-x-2 text-sm font-medium transition-all duration-200 shadow-lg shadow-purple-500/20"
+          >
+            <CreditCard className="w-4 h-4" />
+            <span>Buy Crypto</span>
+          </motion.a>
+          
+          <motion.button
+            onClick={() => setIsDepositModalOpen(true)}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.98 }}
+            className="bg-indigo-600/90 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center justify-center space-x-2 text-sm font-medium transition-all duration-200 shadow-lg shadow-indigo-500/20"
+          >
+            <ArrowDownToLine className="w-4 h-4" />
+            <span>Deposit</span>
+          </motion.button>
+          
+          <DepositModal 
+            isOpen={isDepositModalOpen} 
+            onClose={() => setIsDepositModalOpen(false)} 
+          />
+          
+          <motion.button
+            onClick={() => {/* Add withdraw functionality */}}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.98 }}
+            className="bg-indigo-700/90 hover:bg-indigo-800 text-white px-4 py-2 rounded-lg flex items-center justify-center space-x-2 text-sm font-medium transition-all duration-200 shadow-lg shadow-indigo-500/20"
+          >
+            <ArrowUpToLine className="w-4 h-4" />
+            <span>Withdraw</span>
+          </motion.button>
+          
+          <motion.button
+            onClick={() => {/* Add swap functionality */}}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.98 }}
+            className="bg-indigo-800/90 hover:bg-indigo-900 text-white px-4 py-2 rounded-lg flex items-center justify-center space-x-2 text-sm font-medium transition-all duration-200 shadow-lg shadow-indigo-500/20"
+          >
+            <RefreshCw className="w-4 h-4" />
+            <span>Swap</span>
+          </motion.button>
+        </div>
+      </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
