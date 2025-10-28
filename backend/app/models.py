@@ -186,7 +186,7 @@ class Deposit(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
-        return f"Deposit of {self.amount} {self.asset_type} - {self.status}"
+        return f"Deposit of {self.amount} {self.asset_type} "
 
     def save(self, *args, **kwargs):
         if self.is_approved and not self.approved_at:
