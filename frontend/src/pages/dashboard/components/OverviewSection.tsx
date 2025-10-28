@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import { TrendingUp, Wallet, LayoutDashboard, Plus, ArrowDownToLine, ArrowUpToLine, RefreshCw, CreditCard } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { DepositModal } from '../../../components/modals/DepositModal';
-import { type Transaction } from '../../../services/apiService';
+import { WithdrawModal } from '../../../components/modals/WithdrawModal';
+import { type Transaction, type Wallet as WalletType } from '../../../services/apiService';
+import { apiService } from '../../../services/apiService';
 import { CoinCarousel } from './CoinCarousel';
 import { CoinOverviewBoard } from './CoinOverviewBoard';
 import { coinGeckoService, type CoinGeckoCoin } from '../../../services/coinGeckoService';
@@ -14,6 +16,7 @@ interface OverviewSectionProps {
 
 export function OverviewSection({ stats, recentTransactions }: OverviewSectionProps) {
   const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
+  const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
   const [coins, setCoins] = useState<CoinGeckoCoin[]>([]);
 
   useEffect(() => {
@@ -64,7 +67,7 @@ export function OverviewSection({ stats, recentTransactions }: OverviewSectionPr
           />
           
           <motion.button
-            onClick={() => {/* Add withdraw functionality */}}
+            onClick={() => setIsWithdrawModalOpen(true)}
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.98 }}
             className="bg-indigo-700/90 hover:bg-indigo-800 text-white px-4 py-2 rounded-lg flex items-center justify-center space-x-2 text-sm font-medium transition-all duration-200 shadow-lg shadow-indigo-500/20"
@@ -72,6 +75,15 @@ export function OverviewSection({ stats, recentTransactions }: OverviewSectionPr
             <ArrowUpToLine className="w-4 h-4" />
             <span>Withdraw</span>
           </motion.button>
+          
+<WithdrawModal 
+            isOpen={isWithdrawModalOpen}
+            onClose={() => setIsWithdrawModalOpen(false)}
+            onWithdrawSuccess={() => {
+              console.log('Withdrawal successful');
+              // You can add any success handling here, like refreshing the dashboard data
+            }}
+          />
           
           <motion.button
             onClick={() => {/* Add swap functionality */}}

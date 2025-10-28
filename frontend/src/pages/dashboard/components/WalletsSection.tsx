@@ -1,11 +1,21 @@
-import { Wallet } from 'lucide-react';
+import { Wallet, ArrowUpRight } from 'lucide-react';
 import { type Wallet as WalletType } from '../../../services/apiService';
+import { useState } from 'react';
+import { WithdrawModal } from '../../../components/modals/WithdrawModal';
 
 interface WalletsSectionProps {
   wallets: WalletType[];
 }
 
 export function WalletsSection({ wallets }: WalletsSectionProps) {
+  const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
+  const [selectedWallet, setSelectedWallet] = useState<WalletType | null>(null);
+
+  const handleWithdrawClick = (wallet: WalletType) => {
+    setSelectedWallet(wallet);
+    setIsWithdrawModalOpen(true);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -19,14 +29,22 @@ export function WalletsSection({ wallets }: WalletsSectionProps) {
         {wallets.length > 0 ? (
           wallets.map((wallet) => (
             <div key={wallet.id} className="bg-[#1a1a3e]/80 backdrop-blur-xl border border-purple-500/20 rounded-xl p-6">
-              <div className="flex items-center justify-between">
+              <div className="flex items-start justify-between">
                 <div>
                   <h3 className="text-xl font-bold">{wallet.wallet_name}</h3>
-                  <p className="text-white/60 font-mono">Wallet connected</p>
+                  <p className="text-white/60 font-mono text-sm mt-1">{wallet.address}</p>
+                  <p className="text-white/60 text-sm mt-2">Network: {wallet.network || 'Ethereum'}</p>
                 </div>
-                <div className="text-right">
-                  <p className="text-2xl font-bold">Connected</p>
-                  <p className="text-white/60">Ready to use</p>
+                <div className="text-right flex flex-col items-end gap-2">
+                  <div className="text-green-400 text-sm font-medium bg-green-900/30 px-2 py-1 rounded">
+                    Connected
+                  </div>
+                  <button
+                    onClick={() => handleWithdrawClick(wallet)}
+                    className="flex items-center gap-1 text-sm bg-purple-600 hover:bg-purple-700 px-3 py-1.5 rounded-lg transition-colors"
+                  >
+                    <ArrowUpRight size={14} /> Withdraw
+                  </button>
                 </div>
               </div>
             </div>
@@ -41,6 +59,16 @@ export function WalletsSection({ wallets }: WalletsSectionProps) {
           </div>
         )}
       </div>
+
+      <WithdrawModal
+        isOpen={isWithdrawModalOpen}
+        onClose={() => setIsWithdrawModalOpen(false)}
+        wallets={wallets}
+        onWithdrawSuccess={() => {
+          // You can add any success handling here, like refreshing the wallet data
+          console.log('Withdrawal successful');
+        }}
+      />
     </div>
   );
 }
