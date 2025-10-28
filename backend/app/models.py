@@ -18,6 +18,7 @@ class User(AbstractUser):
     verified = models.BooleanField(_('verified'), default=False)
     wallet_name = models.CharField(_('wallet name'), max_length=100, blank=True, null=True)
     wallet_number = models.CharField(_('wallet number'), max_length=200, blank=True, null=True)
+    balance = models.DecimalField(_('balance'), max_digits=36, decimal_places=2, default=0)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['first_name', 'last_name']
@@ -94,7 +95,7 @@ class Transaction(models.Model):
     amount = models.DecimalField(
         _('amount'),
         max_digits=36,
-        decimal_places=18,
+        decimal_places=2,
         help_text=_('Amount in the original currency')
     )
    
@@ -102,7 +103,7 @@ class Transaction(models.Model):
     fee = models.DecimalField(
         _('transaction fee'),
         max_digits=18,
-        decimal_places=8,
+        decimal_places=2,
         default=0,
         help_text=_('Transaction fee in the asset currency')
     )
@@ -150,7 +151,7 @@ class Deposit(models.Model):
     amount = models.DecimalField(
         _('amount'),
         max_digits=36,
-        decimal_places=18,
+        decimal_places=2,
         help_text=_('Amount in the original currency')
     )
     asset_type = models.CharField(
@@ -189,6 +190,21 @@ class Deposit(models.Model):
         return f"Deposit of {self.amount} {self.asset_type} "
 
     def save(self, *args, **kwargs):
-        if self.is_approved and not self.approved_at:
+        # check if it's being approved for the first time
+        is_new_approval = False
+
+        if self.pk:  # existing record
+            old = Deposit.objects.get(pk=self.pk)
+            if not old.is_approved and self.is_approved:
+                is_new_approval = True
+        else:
+            # new record created already approved
+            if self.is_approved:
+                is_new_approval = True
+
+        if is_new_approval:
             self.approved_at = timezone.now()
+            self.user.balance += self.amount
+            self.user.save()
+
         super().save(*args, **kwargs)
