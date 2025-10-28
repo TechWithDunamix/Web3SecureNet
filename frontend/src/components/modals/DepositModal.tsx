@@ -214,16 +214,16 @@ export function DepositModal({ isOpen, onClose }: DepositModalProps) {
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+      className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50"
       onClick={onClose}
     >
       <div
-        className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-md overflow-hidden relative"
+        className="w-full max-w-md  relative"
         onClick={(e) => e.stopPropagation()}
       >
         {isSubmitting && (
-          <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-10">
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg flex flex-col items-center">
+          <div className="absolute inset-0  flex items-center justify-center z-10">
+            <div className="rounded-lg flex flex-col items-center">
               <Loader2 className="h-8 w-8 animate-spin text-blue-500 mb-4" />
               <p className="text-gray-700 dark:text-gray-300">
                 Processing your deposit...

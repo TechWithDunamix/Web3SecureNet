@@ -114,15 +114,14 @@ class TransactionSerializer(serializers.ModelSerializer):
     """
     transaction_type = serializers.ChoiceField(choices=TransactionType.choices)
     status = serializers.ChoiceField(choices=TransactionStatus.choices, read_only=True)
-    asset_type = serializers.ChoiceField(choices=AssetType.choices)
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
     user_email = serializers.EmailField(source='user.email', read_only=True)
     
     class Meta:
         model = Transaction
         fields = [
-            'id', 'transaction_id', 'transaction_type', 'status', 'amount', 'asset_type',
-            'from_address', 'to_address', 'fee', 'network_fee', 'metadata',
+            'id', 'transaction_id', 'transaction_type', 'status', 'amount', 
+             'fee', 
             'created_at', 'updated_at', 'completed_at', 'user', 'user_email'
         ]
         read_only_fields = ('transaction_id', 'created_at', 'updated_at', 'completed_at')

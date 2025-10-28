@@ -117,7 +117,7 @@ class Transaction(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
-        return f"{self.get_transaction_type_display()} - {self.amount} {self.asset_type} ({self.status})"
+        return f"TRX - {self.amount}  ({self.status})"
 
     def save(self, *args, **kwargs):
         if self.status == TransactionStatus.COMPLETED and not self.completed_at:

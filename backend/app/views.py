@@ -212,23 +212,41 @@ def wallet_disconnect_view(request):
     }, status=status.HTTP_200_OK)
 
 
-@api_view(['GET', 'POST'])
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def transaction_list_create_view(request):
     """
-    List all transactions for the authenticated user or create a new transaction
+    List all transactions for the authenticated user
     """
-    if request.method == 'GET':
-        transactions = Transaction.objects.filter(user=request.user).order_by('-created_at')
-        serializer = TransactionSerializer(transactions, many=True)
-        return Response(serializer.data)
+    # Get query parameters
+    transaction_type = request.query_params.get('type')
+    asset_type = request.query_params.get('asset')
+    limit = int(request.query_params.get('limit', 50))
+    offset = int(request.query_params.get('offset', 0))
     
-    elif request.method == 'POST':
-        serializer = TransactionSerializer(data=request.data, context={'request': request})
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    # Start with base queryset
+    transactions = Transaction.objects.filter(user_id=request.user.id)
+    
+    # # Apply filters if provided
+    # if transaction_type:
+    #     transactions = transactions.filter(transaction_type=transaction_type)
+    # if asset_type:
+    #     transactions = transactions.filter(asset_type=asset_type)
+    
+    # Order and paginate
+    transactions = transactions.order_by('-created_at')[offset:offset + limit]
+    # Serialize the data
+    serializer = TransactionSerializer(transactions, many=True)
+    print(serializer.data)
+    # Prepare response data
+    response_data = {
+        'count': transactions.count(),
+        'next': None,  # You can implement pagination links here if needed
+        'previous': None,  # You can implement pagination links here if needed
+        'results': serializer.data
+    }
+    
+    return Response(response_data)
 
 
 @api_view(['GET'])

@@ -40,6 +40,7 @@ urlpatterns = [
     
     # Transaction endpoints
     path('transactions/', transaction_list_create_view, name='transaction-list'),
+    path('transactions/user/', transaction_list_create_view, name='user-transactions'),  # For fetching user's transactions
     path('transactions/<str:tx_id>/', transaction_detail_view, name='transaction-detail'),
     
     # Deposit endpoints
