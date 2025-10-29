@@ -481,11 +481,21 @@ export const apiService = {
 
   // Password change
   async changePassword(data: { old_password: string; new_password: string }) {
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    if (data.old_password === "current_password") {
-      return { success: true };
+    const response = await fetch(`${API_BASE_URL}/auth/change-password/`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        current_password: data.old_password,
+        new_password: data.new_password
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to change password');
     }
-    throw new Error("Current password is incorrect");
+
+    return await response.json();
   },
 
   // OTP endpoints
@@ -535,14 +545,40 @@ export const apiService = {
     },
   },
 
-  // Transaction endpoints
-  transaction: {
-    getTransactions: async () => {
-      return api.get('/transactions/');
-    },
-
-    getTransaction: async (txId: string) => {
-      return api.get(`/transactions/${txId}/`);
-    },
+// Transaction endpoints
+transaction: {
+  getTransactions: async () => {
+    return api.get('/transactions/');
   },
+
+  getTransaction: async (txId: string) => {
+    return api.get(`/transactions/${txId}/`);
+  },
+},
+
+// User stats endpoint
+getUserStats: async (): Promise<{
+  balance: number;
+  total_invested: number;
+  active_investments: number;
+  today_earnings: number;
+  total_earnings: number;
+  potential_earnings: number;
+}> => {
+  try {
+    const response = await api.get('/profile/stats/');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching user stats:', error);
+    // Return default values in case of error
+    return {
+      balance: 0,
+      total_invested: 0,
+      active_investments: 0,
+      today_earnings: 0,
+      total_earnings: 0,
+      potential_earnings: 0
+    };
+  }
+},
 };

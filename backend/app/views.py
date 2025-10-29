@@ -7,8 +7,13 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework.views import APIView
+from django.contrib.auth.hashers import check_password
+from django.contrib.auth import update_session_auth_hash
+from django.db.models import Sum, F, ExpressionWrapper, DecimalField
+from django.utils import timezone
+from datetime import timedelta
 
-from .models import User, Transaction, Deposit, Withdrawal, TransactionStatus, TransactionType,Investment,AssetType
+from .models import User, Transaction, Deposit, Withdrawal, TransactionStatus, TransactionType, Investment, AssetType
 from .serializers import (
     UserRegistrationSerializer,
     CustomTokenObtainPairSerializer,
@@ -495,9 +500,110 @@ def admin_approve_deposit(request, deposit_id):
     
     return Response(DepositSerializer(deposit).data)
 
-class InvestmentView(APIView):
+class ChangePasswordView(APIView):
     permission_classes = [IsAuthenticated]
     
+    def post(self, request):
+        user = request.user
+        current_password = request.data.get('current_password')
+        new_password = request.data.get('new_password')
+        
+        if not current_password or not new_password:
+            return Response(
+                {'error': 'Current password and new password are required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        if not check_password(current_password, user.password):
+            return Response(
+                {'error': 'Current password is incorrect'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        if len(new_password) < 8:
+            return Response(
+                {'error': 'New password must be at least 8 characters long'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        user.set_password(new_password)
+        user.save()
+        
+        # Update session to prevent logout after password change
+        update_session_auth_hash(request, user)
+        
+        return Response(
+            {'message': 'Password updated successfully'},
+            status=status.HTTP_200_OK
+        )
+
+
+class UserStatsView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        """
+        Get user's balance and investment stats
+        """
+        user = request.user
+        today = timezone.now().date()
+        
+        # Calculate total balance (sum of all deposits - withdrawals)
+        total_deposits = Deposit.objects.filter(
+            user=user,
+            is_approved=True
+        ).aggregate(total=Sum('amount'))['total'] or 0
+        
+        total_withdrawals = Withdrawal.objects.filter(
+            user=user,
+            is_approved=True
+        ).aggregate(total=Sum('amount'))['total'] or 0
+        
+        # Calculate active investments
+        active_investments = Investment.objects.filter(
+            user=user,
+            status='ACTIVE'
+        )
+        
+        total_invested = active_investments.aggregate(
+            total=Sum('amount')
+        )['total'] or 0
+        
+        # Calculate today's earnings
+        today_earnings = Transaction.objects.filter(
+            user=user,
+            transaction_type='INVESTMENT',
+            status='COMPLETED',
+            created_at__date=today
+        ).aggregate(total=Sum('amount'))['total'] or 0
+        
+        # Calculate total earnings from investments
+        total_earnings = Investment.objects.filter(
+            user=user,
+            status__in=['ACTIVE', 'COMPLETED']
+        ).aggregate(total=Sum('total_earned'))['total'] or 0
+        
+        # Calculate potential earnings from active investments
+        potential_earnings = 0
+        for inv in active_investments:
+            days_elapsed = (timezone.now().date() - inv.start_date.date()).days
+            if days_elapsed < 0:
+                days_elapsed = 0
+            potential_earnings += (inv.amount * (inv.expected_roi / 100) * days_elapsed) / inv.duration_days
+        
+        return Response({
+            'balance': float(user.balance),
+            'total_invested': float(total_invested),
+            'active_investments': active_investments.count(),
+            'today_earnings': float(today_earnings),
+            'total_earnings': float(total_earnings),
+            'potential_earnings': round(float(potential_earnings), 2)
+        })
+
+
+class InvestmentView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get(self, request):
         investments = Investment.objects.filter(
             user=request.user
@@ -509,7 +615,7 @@ class InvestmentView(APIView):
             
         serializer = InvestmentSerializer(investments, many=True)
         return Response(serializer.data)
-    
+
     def post(self, request):
         serializer = CreateInvestmentSerializer(data=request.data)
         if not serializer.is_valid():
@@ -533,21 +639,21 @@ class InvestmentView(APIView):
             )
         
         try:
-            # Create investment
+        # Create investment
             investment = Investment.objects.create(
-                user=request.user,
+            user=request.user,
                 plan_name=plan_name,
                 transaction=transaction_obj,
-                amount=amount,
+            amount=amount,
                 expected_roi=expected_roi,
                 duration_days=duration_days,
                 end_date=timezone.now() + timezone.timedelta(days=duration_days)
-            )
-            
-            # Update transaction status
+        )
+        
+        # Update transaction status
             transaction_obj.status = TransactionStatus.COMPLETED
             transaction_obj.save()
-            
+        
             return Response(
                 InvestmentSerializer(investment).data,
                 status=status.HTTP_201_CREATED

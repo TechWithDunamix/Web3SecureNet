@@ -3,6 +3,7 @@ import { type Profile } from '../../../services/apiService';
 import { useState } from 'react';
 import { apiService } from '../../../services/apiService';
 import { toast } from 'react-toastify';
+import { ChangePasswordModal } from '../../../components/modals/ChangePasswordModal';
 
 interface ProfileSectionProps {
   user: Profile | null;
@@ -11,6 +12,7 @@ interface ProfileSectionProps {
 
 export function ProfileSection({ user, onProfileUpdate }: ProfileSectionProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
@@ -127,7 +129,10 @@ export function ProfileSection({ user, onProfileUpdate }: ProfileSectionProps) {
             >
               Update Profile
             </button>
-            <button className="w-full bg-[#0a0a1f]/50 hover:bg-[#0a0a1f] border border-purple-500/30 px-4 py-2 rounded-lg transition-colors">
+            <button 
+              onClick={() => setIsPasswordModalOpen(true)}
+              className="w-full bg-[#0a0a1f]/50 hover:bg-[#0a0a1f] border border-purple-500/30 px-4 py-2 rounded-lg transition-colors"
+            >
               Change Password
             </button>
             <button className="w-full bg-[#0a0a1f]/50 hover:bg-[#0a0a1f] border border-purple-500/30 px-4 py-2 rounded-lg transition-colors">
@@ -208,6 +213,16 @@ export function ProfileSection({ user, onProfileUpdate }: ProfileSectionProps) {
           </div>
         </div>
       )}
+
+      {/* Change Password Modal */}
+      <ChangePasswordModal
+        isOpen={isPasswordModalOpen}
+        onClose={() => setIsPasswordModalOpen(false)}
+        onPasswordChanged={() => {
+          toast.success('Password changed successfully');
+          setIsPasswordModalOpen(false);
+        }}
+      />
     </div>
   );
 }

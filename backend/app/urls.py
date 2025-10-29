@@ -19,7 +19,9 @@ from .views import (
     admin_list_pending_deposits,
     admin_approve_deposit,
     WithdrawalView,
-    InvestmentView
+    InvestmentView,
+    ChangePasswordView,
+    UserStatsView
 )
 
 app_name = 'app'
@@ -31,9 +33,11 @@ urlpatterns = [
     path('auth/login-alt/', LoginView.as_view(), name='login-alt'),
     path('auth/token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
 
-    # Profile endpoints
+    # Profile & Stats endpoints
     path('profile/', UserProfileView.as_view(), name='user-profile'),
     path('profile/edit/', UserProfileUpdateView.as_view(), name='edit-profile'),
+    path('profile/stats/', UserStatsView.as_view(), name='user-stats'),
+    path('auth/change-password/', ChangePasswordView.as_view(), name='change-password'),
 
     # Wallet endpoints
     path('wallet/status/', wallet_status_view, name='wallet-status'),

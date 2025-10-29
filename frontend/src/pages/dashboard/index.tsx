@@ -24,7 +24,7 @@ import { WalletsSection } from './components/WalletsSection';``
 import { ProfileSection } from './components/ProfileSection';
 function Dashboard() {
   // Valid tab IDs - must be defined before useState that uses it
-  const validTabs = ['overview', 'investments', 'transactions', 'wallets', 'profile', 'settings'];
+  const validTabs = ['overview', 'investments', 'transactions', 'wallets', 'profile'];
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeSection, setActiveSection] = useState(() => {
