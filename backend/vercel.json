@@ -1,13 +1,8 @@
 {
-  "builds": [
-    {
-      "src": "backend/wsgi.py",
-      "use": "@vercel/python",
-            "config": { "requirementFile": "backend/requirements.txt" }
-
-    }
-  ],
   "routes": [
-    { "src": "/(.*)", "dest": "backend/wsgi.py" }
+    {
+      "src": "/(.*)",
+      "dest": "backend/wsgi.py"
+    }
   ]
 }
