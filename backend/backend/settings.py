@@ -78,14 +78,33 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'web3app1',
+#         'USER': 'dunamix',
+#         'PASSWORD': '#dunamis2006',
+#         'HOST': 'localhost',
+#         'PORT': '5432',
+#     }
+# }
+
+import os
+from dotenv import load_dotenv
+
+load_dotenv()  # Load .env if you’re using one
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'web3app1',
-        'USER': 'dunamix',
-        'PASSWORD': '#dunamis2006',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'NAME': os.getenv('PGDATABASE', 'neondb'),
+        'USER': os.getenv('PGUSER', 'neondb_owner'),
+        'PASSWORD': os.getenv('PGPASSWORD', 'npg_7fFZP8OWaMlg'),
+        'HOST': os.getenv('PGHOST', 'ep-still-sun-adlzwiu1-pooler.c-2.us-east-1.aws.neon.tech'),
+        'PORT': os.getenv('PGPORT', '5432'),
+        'OPTIONS': {
+            'sslmode': 'require'
+        }
     }
 }
 
