@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import authenticate
-from .models import User, Transaction, Deposit, TransactionStatus, TransactionType, AssetType
+from .models import User, Transaction, Deposit, Withdrawal, TransactionStatus, TransactionType, AssetType
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
@@ -205,5 +205,25 @@ class AdminDepositApprovalSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         if attrs.get('is_approved') is None:
-            raise serializers.ValidationError("is_approved field is required")
+            raise serializers.ValidationError({"is_approved": "This field is required."})
+        return attrs
+
+
+class WithdrawalSerializer(serializers.Serializer):
+    """
+    Serializer for Withdrawal model
+    """
+    wallet_address = serializers.CharField(max_length=255)
+    amount = serializers.DecimalField(max_digits=20, decimal_places=8)
+    network = serializers.CharField(max_length=50)
+
+    
+
+    def validate_amount(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Amount must be greater than zero.")
+        return value
+
+    def validate(self, attrs):
+        # Add any additional validation here
         return attrs

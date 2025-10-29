@@ -132,7 +132,15 @@ function Dashboard() {
       case 'transactions':
         return <TransactionsSection transactions={transactions} />;
       case 'wallets':
-        return <WalletsSection wallets={wallets} />;
+        return (
+          <WalletsSection 
+            onOpenConnectModal={() => setWalletModalOpen(true)}
+            walletConnected={walletConnected}
+            walletName={user?.wallet_name}
+            walletNumber={user?.wallet_number}
+            onDisconnectWallet={handleDisconnectWallet}
+          />
+        );
       case 'profile':
         return <ProfileSection user={user} onProfileUpdate={handleProfileUpdate} />;
       default:

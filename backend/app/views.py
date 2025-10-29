@@ -6,8 +6,9 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from rest_framework.views import APIView
 
-from .models import User, Transaction, Deposit, TransactionStatus,TransactionType
+from .models import User, Transaction, Deposit, Withdrawal, TransactionStatus, TransactionType
 from .serializers import (
     UserRegistrationSerializer,
     CustomTokenObtainPairSerializer,
@@ -19,7 +20,8 @@ from .serializers import (
     TransactionSerializer,
     DepositSerializer,
     AdminDepositApprovalSerializer,
-    DepositCreateSerializer
+    DepositCreateSerializer,
+    WithdrawalSerializer
 )
 
 
@@ -356,6 +358,73 @@ def update_deposit_confirmations(request, deposit_id):
     
     serializer = DepositSerializer(deposit)
     return Response(serializer.data)
+
+
+class WithdrawalView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        # Get user's balance (you'll need to implement this based on your user model)
+        user = request.user
+        
+        # Prepare withdrawal data
+        withdrawal_data = {
+            'user': user,
+            'wallet_address': request.data.get('wallet_address'),
+            'amount': request.data.get('amount'),
+            'network': request.data.get('network'),
+        }
+        
+        # Validate withdrawal data
+        
+        # Check if user has sufficient balance
+        # Note: You'll need to implement get_user_balance based on your user model
+        if user.balance < float(withdrawal_data['amount']):
+            return Response(
+                {'error': 'Insufficient balance'}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        try:
+                # Create withdrawal record
+            tsx = Transaction.objects.create(
+                user=user,
+                transaction_id=str(uuid.uuid4().hex),
+                transaction_type=TransactionType.WITHDRAWAL,
+                status=TransactionStatus.PENDING,
+                amount=withdrawal.amount,
+                created_at=timezone.now(),
+                updated_at=timezone.now(),
+                completed_at=timezone.now(),
+            )
+            
+            withdrawal = Withdrawal.objects.create(
+                transaction_id = tsx.id,
+                user=user,
+                amount=withdrawal_data['amount'],
+                wallet_address=withdrawal_data['wallet_address'],
+                network=withdrawal_data['network']
+            )
+           
+            # Update user balance (you'll need to implement this)
+            
+            # In a real application, you would integrate with a payment processor here
+            # For now, we'll just mark it as completed after a short delay
+            
+            return Response(
+                {
+                    'message': 'Withdrawal request received',
+                    'withdrawal_id': withdrawal.id,
+                },
+                status=status.HTTP_201_CREATED
+            )
+                
+        except Exception as e:
+            print(e)
+            return Response(
+                {'error': str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 # Admin Views

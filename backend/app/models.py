@@ -126,6 +126,60 @@ class Transaction(models.Model):
         super().save(*args, **kwargs)
 
 
+class Withdrawal(models.Model):
+    """A model for tracking withdrawal requests."""
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='withdrawals',
+        verbose_name=_('user')
+    )
+    transaction_id = models.CharField(
+        _('transaction ID'),
+        max_length=255,
+        unique=True,
+        help_text=_('Unique identifier for the transaction'),
+        null=True,
+        blank=True
+    )
+    wallet_address = models.CharField(
+        _('wallet address'),
+        max_length=255,
+        help_text=_('The address where the funds will be sent')
+    )
+    amount = models.DecimalField(
+        _('amount'),
+        max_digits=36,
+        decimal_places=2,
+        help_text=_('Amount to withdraw')
+    )
+   
+    network = models.CharField(
+        _('network'),
+        max_length=50,
+        help_text=_('Blockchain network for the withdrawal')
+    )
+   
+    is_approved = models.BooleanField(
+        _('is approved'),
+        default=False,
+        help_text=_('Whether the withdrawal has been approved by admin')
+    )
+    approved_at = models.DateTimeField(_('approved at'), null=True, blank=True)
+    notes = models.TextField(_('admin notes'), blank=True)
+    created_at = models.DateTimeField(_('created at'), auto_now_add=True)
+    updated_at = models.DateTimeField(_('updated at'), auto_now=True)
+
+    class Meta:
+        verbose_name = _('withdrawal')
+        verbose_name_plural = _('withdrawals')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Withdrawal of {self.amount}  to {self.wallet_address}"
+
+    
+
 class Deposit(models.Model):
     """
     A model specifically for tracking deposit transactions.

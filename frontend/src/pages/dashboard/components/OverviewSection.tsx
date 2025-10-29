@@ -85,15 +85,7 @@ export function OverviewSection({ stats, recentTransactions }: OverviewSectionPr
             }}
           />
           
-          <motion.button
-            onClick={() => {/* Add swap functionality */}}
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.98 }}
-            className="bg-indigo-800/90 hover:bg-indigo-900 text-white px-4 py-2 rounded-lg flex items-center justify-center space-x-2 text-sm font-medium transition-all duration-200 shadow-lg shadow-indigo-500/20"
-          >
-            <RefreshCw className="w-4 h-4" />
-            <span>Swap</span>
-          </motion.button>
+          
         </div>
       </div>
 

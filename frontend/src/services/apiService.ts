@@ -84,6 +84,23 @@ export interface Deposit {
   updated_at: string;
 }
 
+export interface Withdrawal {
+  id: number;
+  user: number;
+  transaction: string | Transaction;
+  wallet_address: string;
+  amount: string;
+  asset_type: string;
+  network: string;
+  tx_hash?: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
+  is_approved: boolean;
+  approved_at?: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Wallet {
   id: number;
   user: number;
@@ -479,6 +496,15 @@ export const apiService = {
 
   async verifyOTP(data: { otp: string }) {
     return api.post('/auth/verify-otp/', data);
+  },
+
+  // Withdrawal endpoints
+  withdraw: (data: {
+    wallet_address: string;
+    amount: string | number;
+    network: string;
+  }) => {
+    return api.post('/withdrawals/', data);
   },
 
   // Deposit endpoints

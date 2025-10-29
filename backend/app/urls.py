@@ -17,7 +17,8 @@ from .views import (
     deposit_detail_view,
     update_deposit_confirmations,
     admin_list_pending_deposits,
-    admin_approve_deposit
+    admin_approve_deposit,
+    WithdrawalView
 )
 
 app_name = 'app'
@@ -49,7 +50,10 @@ urlpatterns = [
     path('deposits/<int:deposit_id>/', deposit_detail_view, name='deposit-detail'),
     path('deposits/<int:deposit_id>/confirmations/', update_deposit_confirmations, name='deposit-update-confirmations'),
     
+    # Withdrawal endpoints
+    path('withdrawals/', WithdrawalView.as_view(), name='withdrawal-create'),
+    
     # Admin endpoints
-    path('admin/deposits/pending/', admin_list_pending_deposits, name='admin-deposit-pending'),
-    path('admin/deposits/<int:deposit_id>/approve/', admin_approve_deposit, name='admin-deposit-approve'),
+    path('admin/deposits/pending/', admin_list_pending_deposits, name='admin-pending-deposits'),
+    path('admin/deposits/<int:deposit_id>/approve/', admin_approve_deposit, name='admin-approve-deposit'),
 ]

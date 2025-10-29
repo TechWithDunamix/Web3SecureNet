@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { X, Loader2, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { toast } from 'sonner';
+import { toast } from 'react-toastify';
 import { apiService } from '../../services/apiService';
 
 const NETWORKS = [
@@ -43,16 +43,22 @@ export function WithdrawModal({ isOpen, onClose, onWithdrawSuccess }: WithdrawMo
 
     setIsSubmitting(true);
     try {
-      await apiService.withdraw({
+      const { status } = await apiService.withdraw({
+        wallet_address: withdrawAddress,
         amount: Number(amount),
-        address: withdrawAddress,
-        network: selectedNetwork.id,
-        symbol: selectedNetwork.symbol,
+        network: selectedNetwork.name,
       });
-      
+      if (status === 403) {
+        toast.error('Insufficient balance');
+        return;
+      }
       setIsSuccess(true);
       onWithdrawSuccess?.();
     } catch (error) {
+      if (error?.status === 403) {
+        toast.error('Insufficient balance');
+        return;
+      }
       console.error('Withdrawal failed:', error);
       toast.error('Withdrawal failed. Please try again.');
     } finally {
