@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
-from .models import User, Transaction, Deposit
+from .models import User, Transaction, Deposit, Withdrawal, Investment, InvestmentStatus
 
 # Custom Admin Site
 class CustomAdminSite(admin.AdminSite):
@@ -69,8 +69,61 @@ class DepositAdmin(admin.ModelAdmin):
     transaction_id.short_description = 'Transaction ID'
     
     def approve_deposits(self, request, queryset):
-        updated = queryset.update(is_approved=True)
-        self.message_user(request, f"{updated} deposit(s) approved successfully.")
+        updated = queryset.filter(is_approved=False).update(is_approved=True)
+        self.message_user(request, f"Successfully approved {updated} deposit(s).")
     approve_deposits.short_description = "Approve selected deposits"
+
+# Withdrawal Admin
+@admin.register(Withdrawal, site=admin_site)
+class WithdrawalAdmin(admin.ModelAdmin):
+    list_display = ('id', 'transaction_id', 'get_user_email', 'amount','is_approved', 'created_at')
+    list_filter = ('is_approved',  'created_at')
+    search_fields = ('transaction__transaction_id', 'user__email')
+    readonly_fields = ('transaction_id', 'created_at', 'approved_at')
+    date_hierarchy = 'created_at'
+    actions = ['approve_withdrawals']
+
+    def get_user_email(self, obj):
+        return obj.user.email
+    get_user_email.short_description = 'User Email'
+
+    def transaction_id(self, obj):
+        return obj.transaction.transaction_id
+    transaction_id.short_description = 'Transaction ID'
+
+    def approve_withdrawals(self, request, queryset):
+        updated = queryset.filter(is_approved=False).update(is_approved=True)
+        self.message_user(request, f"Successfully approved {updated} withdrawal(s).")
+    approve_withdrawals.short_description = "Approve selected withdrawals"
+
+# Investment Admin
+@admin.register(Investment, site=admin_site)
+class InvestmentAdmin(admin.ModelAdmin):
+    list_display = ('id', 'get_user_email', 'plan_name', 'amount', 'status', 'start_date', 'end_date')
+    list_filter = ('status', 'plan_name', 'start_date')
+    search_fields = ('user__email', 'plan_name', 'transaction__transaction_id')
+    readonly_fields = ('created_at', 'updated_at', 'last_payout', 'next_payout')
+    date_hierarchy = 'created_at'
+    actions = ['mark_as_active', 'mark_as_completed', 'mark_as_cancelled']
+
+    def get_user_email(self, obj):
+        return obj.user.email
+    get_user_email.short_description = 'User Email'
+
+    def mark_as_active(self, request, queryset):
+        updated = queryset.filter(status__in=[InvestmentStatus.PENDING, InvestmentStatus.CANCELLED])\
+                        .update(status=InvestmentStatus.ACTIVE)
+        self.message_user(request, f"Marked {updated} investment(s) as active.")
+    mark_as_active.short_description = "Mark selected as Active"
+
+    def mark_as_completed(self, request, queryset):
+        updated = queryset.update(status=InvestmentStatus.COMPLETED)
+        self.message_user(request, f"Marked {updated} investment(s) as completed.")
+    mark_as_completed.short_description = "Mark selected as Completed"
+
+    def mark_as_cancelled(self, request, queryset):
+        updated = queryset.update(status=InvestmentStatus.CANCELLED)
+        self.message_user(request, f"Marked {updated} investment(s) as cancelled.")
+    mark_as_cancelled.short_description = "Mark selected as Cancelled"
 
 # Remove default admin site

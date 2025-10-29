@@ -401,7 +401,7 @@ class WithdrawalView(APIView):
                 transaction_id=str(uuid.uuid4().hex),
                 transaction_type=TransactionType.WITHDRAWAL,
                 status=TransactionStatus.PENDING,
-                amount=withdrawal.amount,
+                amount=float(withdrawal_data['amount']),
                 created_at=timezone.now(),
                 updated_at=timezone.now(),
                 completed_at=timezone.now(),
@@ -410,7 +410,7 @@ class WithdrawalView(APIView):
             withdrawal = Withdrawal.objects.create(
                 transaction_id = tsx.id,
                 user=user,
-                amount=withdrawal_data['amount'],
+                amount=float(withdrawal_data['amount']),
                 wallet_address=withdrawal_data['wallet_address'],
                 network=withdrawal_data['network']
             )
@@ -429,7 +429,7 @@ class WithdrawalView(APIView):
             )
                 
         except Exception as e:
-            print(e)
+            raise e
             return Response(
                 {'error': str(e)}, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
