@@ -62,6 +62,67 @@ class TransactionType(TextChoices):
     TRANSFER = 'TRANSFER', _('Transfer')
     SWAP = 'SWAP', _('Swap')
     FEE = 'FEE', _('Fee')
+    INVESTMENT = 'INVESTMENT', _('Investment')
+
+
+class InvestmentStatus(TextChoices):
+    ACTIVE = 'ACTIVE', _('Active')
+    COMPLETED = 'COMPLETED', _('Completed')
+    CANCELLED = 'CANCELLED', _('Cancelled')
+    PENDING = 'PENDING', _('Pending')
+
+
+class Investment(models.Model):
+    """Model representing user investments"""
+    PLAN_CHOICES = [
+        ('BASIC', 'Basic Plan'),
+        ('STANDARD', 'Standard Plan'),
+        ('PREMIUM', 'Premium Plan'),
+    ]
+    
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='investments'
+    )
+    plan_name = models.CharField(max_length=100)
+    amount = models.DecimalField(max_digits=18, decimal_places=8)
+    transaction = models.OneToOneField(
+        'Transaction',
+        on_delete=models.PROTECT,
+        related_name='investment'
+    )
+    expected_roi = models.DecimalField(
+        max_digits=5, 
+        decimal_places=2,
+        help_text="Expected ROI percentage"
+    )
+    duration_days = models.PositiveIntegerField(help_text="Investment duration in days")
+    start_date = models.DateTimeField(auto_now_add=True)
+    end_date = models.DateTimeField()
+    status = models.CharField(
+        max_length=20,
+        choices=InvestmentStatus.choices,
+        default=InvestmentStatus.PENDING
+    )
+    last_payout = models.DateTimeField(null=True, blank=True)
+    next_payout = models.DateTimeField(null=True, blank=True)
+    total_earned = models.DecimalField(max_digits=18, decimal_places=8, default=0)
+    created_at = models.DateTimeField(_('created at'), auto_now_add=True)
+    updated_at = models.DateTimeField(_('updated at'), auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.email} - {self.plan_name} (${self.amount})"
+
+    def save(self, *args, **kwargs):
+        if not self.pk:  # New investment
+            self.end_date = timezone.now() + timezone.timedelta(days=self.duration_days)
+            # Set next payout to 24 hours from now for daily payouts
+            self.next_payout = timezone.now() + timezone.timedelta(days=1)
+        super().save(*args, **kwargs)
 
 
 class Transaction(models.Model):

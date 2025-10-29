@@ -1,8 +1,51 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import authenticate
-from .models import User, Transaction, Deposit, Withdrawal, TransactionStatus, TransactionType, AssetType
+from django.utils import timezone
+from .models import (
+    User, Transaction, Deposit, Withdrawal, TransactionStatus, TransactionType, AssetType,
+    Investment, InvestmentStatus
+)
 
+
+class InvestmentTransactionSerializer(serializers.Serializer):
+    id = serializers.UUIDField(read_only=True)
+    amount = serializers.DecimalField(max_digits=18, decimal_places=8)
+    status = serializers.ChoiceField(choices=TransactionStatus.choices)
+    created_at = serializers.DateTimeField()
+
+class InvestmentSerializer(serializers.Serializer):
+    id = serializers.UUIDField(read_only=True)
+    plan_name = serializers.CharField()
+    amount = serializers.DecimalField(max_digits=18, decimal_places=8)
+    expected_roi = serializers.DecimalField(max_digits=5, decimal_places=2)
+    duration_days = serializers.IntegerField()
+    start_date = serializers.DateTimeField()
+    end_date = serializers.DateTimeField()
+    status = serializers.ChoiceField(choices=InvestmentStatus.choices)
+    total_earned = serializers.DecimalField(max_digits=18, decimal_places=8)
+    next_payout = serializers.DateTimeField(allow_null=True)
+    transaction = InvestmentTransactionSerializer()
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['days_remaining'] = (instance.end_date - timezone.now()).days if instance.end_date > timezone.now() else 0
+        return data
+
+class CreateInvestmentSerializer(serializers.Serializer):
+    plan_name = serializers.CharField(max_length=100)
+    amount = serializers.DecimalField(max_digits=18, decimal_places=8, min_value=0.00000001)
+    expected_roi = serializers.DecimalField(max_digits=5, decimal_places=2, min_value=0, max_value=100)
+    duration_days = serializers.IntegerField(min_value=1)
+    transaction_hash = serializers.CharField(max_length=128, required=False)
+
+    def validate_amount(self, value):
+        min_investment = 10  # Example minimum
+        if value < min_investment:
+            raise serializers.ValidationError(
+                f'Minimum investment amount is {min_investment}'
+            )
+        return value
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     """

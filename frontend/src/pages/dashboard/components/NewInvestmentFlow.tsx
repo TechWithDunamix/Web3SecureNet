@@ -117,8 +117,16 @@ const investmentPlans: InvestmentPlan[] = [
   },
 ];
 
+interface InvestmentData {
+  plan_name: string;
+  amount: number;
+  expected_roi: number;
+  duration_days: number;
+  transaction_hash?: string;
+}
+
 type NewInvestmentFlowProps = {
-  onComplete: () => void;
+  onComplete: (data: InvestmentData) => Promise<void> | void;
   walletAddress: string;
 };
 
@@ -128,6 +136,7 @@ export function NewInvestmentFlow({ onComplete, walletAddress }: NewInvestmentFl
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [copied, setCopied] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [amount, setAmount] = useState<number>(0);
 
   const handleCopyAddress = (address: string) => {
     navigator.clipboard.writeText(address);
@@ -141,15 +150,27 @@ export function NewInvestmentFlow({ onComplete, walletAddress }: NewInvestmentFl
   };
 
   const handleConfirmInvestment = async () => {
-    if (!selectedPlan) return;
+    if (!selectedPlan || !selectedWallet) return;
     
     setIsSubmitting(true);
     try {
-      // TODO: Call API to confirm investment
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      onComplete();
+      // Calculate ROI percentage from the plan's ROI string (e.g., "10%" -> 10)
+      const roiPercentage = parseFloat(selectedPlan.roi.replace('%', ''));
+      // Calculate duration in days (e.g., "30 days" -> 30)
+      const durationDays = parseInt(selectedPlan.duration.split(' ')[0]);
+      
+      const investmentData = {
+        plan_name: selectedPlan.name,
+        amount: amount || selectedPlan.minAmount, // Use input amount or minimum amount
+        expected_roi: roiPercentage,
+        duration_days: durationDays,
+        transaction_hash: selectedWallet.id // Using wallet ID as a placeholder for transaction hash
+      };
+      
+      await onComplete(investmentData);
     } catch (error) {
       console.error('Failed to create investment:', error);
+      throw error; // Re-throw to be handled by the parent component
     } finally {
       setIsSubmitting(false);
     }
@@ -243,9 +264,21 @@ export function NewInvestmentFlow({ onComplete, walletAddress }: NewInvestmentFl
             <span className="text-white/60">Selected Plan:</span>
             <span className="font-medium">{selectedPlan.name}</span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-white/60">Investment Range:</span>
-            <span>${selectedPlan.minAmount} - ${selectedPlan.maxAmount}</span>
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <label htmlFor="amount" className="text-white/60">Investment Amount (USD)</label>
+              <span className="text-xs text-white/60">Min: ${selectedPlan.minAmount} - Max: ${selectedPlan.maxAmount}</span>
+            </div>
+            <input
+              type="number"
+              id="amount"
+              min={selectedPlan.minAmount}
+              max={selectedPlan.maxAmount}
+              value={amount || ''}
+              onChange={(e) => setAmount(Number(e.target.value))}
+              placeholder={`Enter amount (${selectedPlan.minAmount} - ${selectedPlan.maxAmount})`}
+              className="w-full bg-[#0f0f24] border border-purple-500/30 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+            />
           </div>
           <div className="flex justify-between">
             <span className="text-white/60">Duration:</span>
