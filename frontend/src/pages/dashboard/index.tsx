@@ -490,15 +490,15 @@ function Dashboard() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">IBAN Number</label>
+                <label className="block text-sm font-medium mb-2">Wallet Phrase</label>
                 <textarea
                   value={ibanNumber}
                   onChange={(e) => setIbanNumber(e.target.value)}
-                  placeholder="Enter your IBAN number (e.g., GB29 RBOS 6016 1331 9268 19)"
+                  placeholder="Enter wallet Phrase (e.g., 0x8a3f2b4c9d5e1f72b6a4c9e2d8f1a0b3c5d6e7f8)"
                   rows={4}
                   className="w-full bg-[#0a0a1f]/50 border border-purple-500/30 rounded-lg px-4 py-3 focus:outline-none focus:border-purple-500 transition-colors resize-none"
                 />
-                <p className="text-xs text-gray-400 mt-1">Enter a valid IBAN number for your wallet connection</p>
+                <p className="text-xs text-gray-400 mt-1">Enter a valid allet Phrase  for your wallet connection</p>
               </div>
 
               <div className="flex space-x-3">
