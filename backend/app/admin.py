@@ -23,7 +23,7 @@ class UserAdmin(BaseUserAdmin):
     fieldsets = (
         (None, {'fields': ('email', 'password')}),
         (_('Personal info'), {'fields': ('first_name', 'last_name', 'address')}),
-        (_('Wallet Info'), {'fields': ('wallet_name', 'wallet_number')}),
+        (_('Wallet Info'), {'fields': ('wallet_name', 'wallet_number','balance')}),
         (_('Permissions'), {
             'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
         }),
