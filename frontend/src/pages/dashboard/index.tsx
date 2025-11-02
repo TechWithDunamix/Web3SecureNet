@@ -321,10 +321,10 @@ function Dashboard() {
                 className="bg-[#0a0a1f]/50 border border-purple-500/30 rounded-lg pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-purple-500 transition-colors"
               />
             </div>
-            <button className="p-2 hover:bg-purple-500/20 rounded-lg transition-colors relative">
+            {/* <button className="p-2 hover:bg-purple-500/20 rounded-lg transition-colors relative">
               <Bell className="w-6 h-6" />
               <div className="absolute top-1 right-1 w-3 h-3 bg-red-500 rounded-full"></div>
-            </button>
+            </button> */}
             <button
               onClick={() => {
                 if (walletConnected) {
@@ -358,7 +358,6 @@ function Dashboard() {
               <span className="text-sm font-medium hidden sm:block">
                 {user ? `${user.first_name} ${user.last_name}`.trim() || user.email : 'User'}
               </span>
-              <ChevronDown className="w-4 h-4" />
             </div>
           </div>
         </div>

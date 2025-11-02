@@ -10,7 +10,7 @@ def handle_withdrawal_status(sender, instance, created, **kwargs):
     """
     Handle withdrawal status changes and update user balance when approved.
     """
-    if not created and instance.is_approved and not instance.approved_at:
+    if not created and instance.is_approved :
         try:
             with transaction.atomic():
                 # Update the transaction status
@@ -24,9 +24,7 @@ def handle_withdrawal_status(sender, instance, created, **kwargs):
                 user.balance -= instance.amount
                 user.save(update_fields=['balance'])
 
-                # Mark withdrawal as processed
-                instance.approved_at = timezone.now()
-                instance.save(update_fields=['approved_at'])
+                
 
         except Exception as e:
             import logging
@@ -40,7 +38,7 @@ def handle_deposit_status(sender, instance, created, **kwargs):
     """
     Handle deposit status changes and update user balance when approved.
     """
-    if not created and instance.is_approved and not instance.approved_at:
+    if not created and instance.is_approved:
         try:
             with transaction.atomic():
                 # Update the transaction status
@@ -54,9 +52,7 @@ def handle_deposit_status(sender, instance, created, **kwargs):
                 user.balance += instance.amount
                 user.save(update_fields=['balance'])
 
-                # Mark deposit as processed
-                instance.approved_at = timezone.now()
-                instance.save(update_fields=['approved_at'])
+                
 
         except Exception as e:
             import logging

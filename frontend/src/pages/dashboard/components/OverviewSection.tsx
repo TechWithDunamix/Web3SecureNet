@@ -229,7 +229,7 @@ export function OverviewSection({ recentTransactions }: OverviewSectionProps) {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-white/60 text-sm">Total Balance</p>
-              <p className="text-2xl font-bold">${stats.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              <p className="text-2xl font-bold">${stats.balance?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
             </div>
             <div className="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center">
               <Wallet className="w-6 h-6 text-purple-400" />

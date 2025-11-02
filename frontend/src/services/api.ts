@@ -3,6 +3,7 @@ import axios, { type AxiosInstance, type AxiosResponse } from 'axios';
 // Base API configuration
 const API_BASE_URL = 'https://web3-secure-net-qngq.vercel.app/api'; // Update this when backend URL changes
 
+
 // Create axios instance
 const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
