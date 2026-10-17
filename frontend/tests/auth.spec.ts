@@ -114,3 +114,37 @@ test('unknown routes render a recovery link instead of a blank screen', async ({
   await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Back to sign in' })).toBeVisible();
 });
+
+
+test('classroom wallet demo shows a warning and never sends wallet data', async ({ page }) => {
+  await mockApi(page);
+  const walletWrites: string[] = [];
+  page.on('request', request => {
+    if (request.url().includes('/wallet/') && request.method() !== 'GET') walletWrites.push(request.url());
+  });
+  await login(page);
+  await expect(page.getByRole('heading', { name: 'Dashboard Overview' })).toBeVisible();
+  await page.getByRole('button', { name: 'Connect Wallet', exact: true }).click();
+  await expect(page.getByRole('dialog')).toContainText('Classroom training demo');
+  await page.getByRole('button', { name: 'MetaMask Demo' }).click();
+  await expect(page.getByRole('status')).toContainText('Simulating connection to MetaMask');
+  await expect(page.getByRole('alert')).toContainText('Never share your recovery phrase or private key');
+  await expect(page.getByLabel('Dummy recovery value', { exact: true })).toBeDisabled();
+  await expect(page.getByLabel('Dummy recovery value', { exact: true })).toHaveValue('TRAINING DEMO - NOT A REAL RECOVERY PHRASE');
+  expect(walletWrites).toEqual([]);
+  await page.getByRole('button', { name: 'Try another demo wallet' }).click();
+  await expect(page.getByRole('button', { name: 'MetaMask Demo' })).toBeVisible();
+});
+
+test('closing a simulated connection cancels it and resets the demonstration', async ({ page }) => {
+  await mockApi(page);
+  await login(page);
+  await expect(page.getByRole('heading', { name: 'Dashboard Overview' })).toBeVisible();
+  await page.getByRole('button', { name: 'Connect Wallet', exact: true }).click();
+  await page.getByRole('button', { name: 'MetaMask Demo' }).click();
+  await page.getByRole('button', { name: 'Close wallet dialog' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Connect Wallet', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'MetaMask Demo' })).toBeVisible();
+  await expect(page.getByLabel('Dummy recovery value', { exact: true })).toHaveCount(0);
+});

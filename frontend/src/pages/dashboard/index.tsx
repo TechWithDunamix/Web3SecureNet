@@ -20,6 +20,7 @@ import { InvestmentsSection } from './components/InvestmentsSection';
 import { TransactionsSection } from './components/TransactionsSection';
 import { WalletsSection } from './components/WalletsSection';
 import { ProfileSection } from './components/ProfileSection';
+import { WalletTrainingDemo } from '../../components/modals/WalletTrainingDemo';
 function Dashboard() {
   // Valid tab IDs - must be defined before useState that uses it
   const validTabs = ['overview', 'investments', 'transactions', 'wallets', 'profile'];
@@ -313,21 +314,11 @@ function Dashboard() {
       )}
 
       {walletModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div role="dialog" aria-modal="true" aria-labelledby="wallet-title" className="bg-[#1a1a3e] border border-purple-500/30 rounded-lg p-6 w-full max-w-md">
-            <h2 id="wallet-title" className="text-xl font-bold mb-4">Connect browser wallet</h2>
-            <p className="text-white/70 mb-6">
-              Approve access in your Ethereum-compatible wallet. Only your public address is saved.
-              Never enter a recovery phrase or private key on this website.
-            </p>
-            <div className="flex gap-3">
-              <button onClick={() => setWalletModalOpen(false)} disabled={connectingWallet} className="px-4 py-2 border border-purple-500/30 rounded-lg">Cancel</button>
-              <button onClick={handleWalletConnect} disabled={connectingWallet} className="px-4 py-2 bg-purple-600 rounded-lg disabled:opacity-50">
-                {connectingWallet ? 'Waiting for wallet...' : 'Connect browser wallet'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <WalletTrainingDemo
+          onClose={() => setWalletModalOpen(false)}
+          onConnectBrowserWallet={handleWalletConnect}
+          connectingBrowserWallet={connectingWallet}
+        />
       )}
 
     </div>
