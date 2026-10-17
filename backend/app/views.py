@@ -153,7 +153,7 @@ def wallet_status_view(request):
         user = request.user
         serializer = WalletStatusSerializer(user)
         return Response({
-            'wallet_connected': bool(user.wallet_name and user.wallet_number),
+            'wallet_connected': bool(serializer.data['wallet_name'] and serializer.data['wallet_number']),
             'wallet': serializer.data
         }, status=status.HTTP_200_OK)
     except Exception as e:
@@ -170,7 +170,7 @@ def wallet_connect_view(request):
     """
     try:
         user = request.user
-        serializer = WalletConnectSerializer(user, data=request.data, partial=True)
+        serializer = WalletConnectSerializer(user, data=request.data)
 
         if serializer.is_valid():
             serializer.save()
@@ -208,8 +208,7 @@ def wallet_disconnect_view(request):
 
     # Store the disconnected wallet info for reference
     disconnected_wallet = {
-        'wallet_name': user.wallet_name,
-        'wallet_number': user.wallet_number,
+        **WalletStatusSerializer(user).data,
         'disconnected_at': timezone.now()
     }
 

@@ -1,7 +1,9 @@
 import axios, { type AxiosInstance, type AxiosResponse } from 'axios';
 
 // Base API configuration
-const API_BASE_URL = 'https://web3-secure-net-qngq.vercel.app/api'; // Update this when backend URL changes
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://web3-secure-net-qngq.vercel.app/api';
+
+const isPublicAuthRequest = (url = '') => /^\/auth\/(login(?:-alt)?|signup|password-reset)(\/|$)/.test(url);
 
 
 // Create axios instance
@@ -16,7 +18,7 @@ const api: AxiosInstance = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('access_token');
-    if (token) {
+    if (token && !isPublicAuthRequest(config.url)) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
@@ -33,7 +35,7 @@ api.interceptors.response.use(
     const originalRequest = error.config;
 
     // If token is expired and we haven't already tried to refresh
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && originalRequest && !originalRequest._retry && !isPublicAuthRequest(originalRequest.url)) {
       originalRequest._retry = true;
 
       const refreshToken = localStorage.getItem('refresh_token');
@@ -66,6 +68,16 @@ api.interceptors.response.use(
 
 // Auth API functions
 export const authAPI = {
+  async requestPasswordReset(email: string) {
+    const response = await api.post('/auth/password-reset/', { email });
+    return response.data;
+  },
+
+  async confirmPasswordReset(data: { uid: string; token: string; password: string }) {
+    const response = await api.post('/auth/password-reset/confirm/', data);
+    return response.data;
+  },
+
   // Login user
   async login(credentials: { email: string; password: string }) {
     const response = await api.post('/auth/login-alt/', credentials);

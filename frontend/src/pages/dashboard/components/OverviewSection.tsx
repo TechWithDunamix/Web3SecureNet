@@ -1,9 +1,10 @@
+import { formatNumber, numberOrNull } from '../../../utils/numbers';
 import { useState, useEffect } from 'react';
-import { TrendingUp, Wallet, LayoutDashboard, Plus, ArrowDownToLine, ArrowUpToLine, RefreshCw, CreditCard, Clock, BarChart2, DollarSign, PieChart } from 'lucide-react';
+import { TrendingUp, Wallet, ArrowDownToLine, ArrowUpToLine, CreditCard, Clock, BarChart2, DollarSign, PieChart } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { DepositModal } from '../../../components/modals/DepositModal';
 import { WithdrawModal } from '../../../components/modals/WithdrawModal';
-import { type Transaction, type Wallet as WalletType } from '../../../services/apiService';
+import { type Transaction } from '../../../services/apiService';
 import { apiService } from '../../../services/apiService';
 import { CoinCarousel } from './CoinCarousel';
 import { CoinOverviewBoard } from './CoinOverviewBoard';
@@ -15,12 +16,12 @@ interface OverviewSectionProps {
 }
 
 interface StatsData {
-  balance: number;
-  total_invested: number;
-  active_investments: number;
-  today_earnings: number;
-  total_earnings: number;
-  potential_earnings: number;
+  balance: number | null;
+  total_invested: number | null;
+  active_investments: number | null;
+  today_earnings: number | null;
+  total_earnings: number | null;
+  potential_earnings: number | null;
 }
 
 const StatCard = ({ 
@@ -31,7 +32,7 @@ const StatCard = ({
   loading = false
 }: {
   title: string;
-  value: number;
+  value: number | null;
   icon: React.ComponentType<{ className?: string }>;
   color?: 'purple' | 'green' | 'blue' | 'orange';
   loading?: boolean;
@@ -43,11 +44,11 @@ const StatCard = ({
     orange: 'bg-orange-500/10 text-orange-500',
   };
 
-  const formatValue = (val: number) => {
+  const formatValue = (val: number | null) => {
     if (title === 'Active Investments') {
-      return val.toLocaleString();
+      return formatNumber(val);
     }
-    return `$${val.toLocaleString(undefined, { 
+    return `$${formatNumber(val, {
       minimumFractionDigits: 2, 
       maximumFractionDigits: 2 
     })}`;
@@ -92,12 +93,12 @@ export function OverviewSection({ recentTransactions }: OverviewSectionProps) {
     try {
       const statsData = await apiService.getUserStats();
       setStats({
-        balance: statsData.balance,
-        total_invested: statsData.total_invested,
-        active_investments: statsData.active_investments,
-        today_earnings: statsData.today_earnings,
-        total_earnings: statsData.total_earnings,
-        potential_earnings: statsData.potential_earnings
+        balance: numberOrNull(statsData.balance),
+        total_invested: numberOrNull(statsData.total_invested),
+        active_investments: numberOrNull(statsData.active_investments),
+        today_earnings: numberOrNull(statsData.today_earnings),
+        total_earnings: numberOrNull(statsData.total_earnings),
+        potential_earnings: numberOrNull(statsData.potential_earnings)
       });
     } catch (error) {
       console.error('Failed to fetch stats:', error);
@@ -229,7 +230,7 @@ export function OverviewSection({ recentTransactions }: OverviewSectionProps) {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-white/60 text-sm">Total Balance</p>
-              <p className="text-2xl font-bold">${stats.balance?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              <p className="text-2xl font-bold">${formatNumber(stats.balance, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
             </div>
             <div className="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center">
               <Wallet className="w-6 h-6 text-purple-400" />
@@ -241,7 +242,7 @@ export function OverviewSection({ recentTransactions }: OverviewSectionProps) {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-white/60 text-sm">Total Invested</p>
-              <p className="text-2xl font-bold">${stats.total_invested.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              <p className="text-2xl font-bold">${formatNumber(stats.total_invested, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
             </div>
             <div className="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center">
               <TrendingUp className="w-6 h-6 text-green-400" />
@@ -253,8 +254,8 @@ export function OverviewSection({ recentTransactions }: OverviewSectionProps) {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-white/60 text-sm">Today's Earnings</p>
-              <p className={`text-2xl font-bold ${stats.today_earnings >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                {stats.today_earnings >= 0 ? '+' : ''}${Math.abs(stats.today_earnings).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              <p className={`text-2xl font-bold ${(stats.today_earnings ?? -1) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {(stats.today_earnings ?? -1) >= 0 ? '+' : ''}${formatNumber(stats.today_earnings === null ? null : Math.abs(stats.today_earnings), { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
@@ -296,7 +297,7 @@ export function OverviewSection({ recentTransactions }: OverviewSectionProps) {
                 <span className={`font-bold ${
                   (transaction.type === 'deposit' || transaction.type === 'investment') ? 'text-green-400' : 'text-red-400'
                 }`}>
-                  {(transaction.type === 'deposit' || transaction.type === 'investment') ? '+' : '-'}${transaction.amount.toLocaleString()}
+                  {(transaction.type === 'deposit' || transaction.type === 'investment') ? '+' : '-'}${formatNumber(transaction.amount)}
                 </span>
               </div>
             ))

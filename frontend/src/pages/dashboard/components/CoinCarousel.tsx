@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { formatNumber, numberOrNull } from '../../../utils/numbers';
+import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown } from 'lucide-react';
-import { coinGeckoService, type CoinGeckoCoin } from '../../../services/coinGeckoService';
+import { type CoinGeckoCoin } from '../../../services/coinGeckoService';
 
 interface CoinCarouselProps {
   coins: CoinGeckoCoin[];
@@ -68,7 +69,7 @@ export function CoinCarousel({ coins }: CoinCarouselProps) {
           className="flex transition-transform duration-300 ease-in-out"
           style={{ transform: `translateX(-${currentIndex * 100}%)` }}
         >
-          {coins.map((coin, index) => (
+          {coins.map((coin) => (
             <div key={coin.id} className="w-full flex-shrink-0 min-w-0">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex items-center space-x-3 min-w-0 flex-1">
@@ -84,7 +85,7 @@ export function CoinCarousel({ coins }: CoinCarouselProps) {
                 </div>
 
                 <div className="text-left sm:text-right flex-shrink-0">
-                  <p className="font-bold text-lg sm:text-xl">${coin.current_price.toLocaleString()}</p>
+                  <p className="font-bold text-lg sm:text-xl">${formatNumber(coin.current_price)}</p>
                   <div className={`flex items-center space-x-1 ${coin.price_change_percentage_24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                     {coin.price_change_percentage_24h >= 0 ? (
                       <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -93,7 +94,7 @@ export function CoinCarousel({ coins }: CoinCarouselProps) {
                     )}
                     <span className="text-xs sm:text-sm font-medium">
                       {coin.price_change_percentage_24h >= 0 ? '+' : ''}
-                      {coin.price_change_percentage_24h.toFixed(2)}%
+                      {formatNumber(coin.price_change_percentage_24h, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%
                     </span>
                   </div>
                 </div>
@@ -103,19 +104,19 @@ export function CoinCarousel({ coins }: CoinCarouselProps) {
               <div className="mt-3 grid grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-sm">
                 <div>
                   <p className="text-white/60">24h High</p>
-                  <p className="font-medium truncate">${coin.high_24h.toLocaleString()}</p>
+                  <p className="font-medium truncate">${formatNumber(coin.high_24h)}</p>
                 </div>
                 <div>
                   <p className="text-white/60">24h Low</p>
-                  <p className="font-medium truncate">${coin.low_24h.toLocaleString()}</p>
+                  <p className="font-medium truncate">${formatNumber(coin.low_24h)}</p>
                 </div>
                 <div>
                   <p className="text-white/60">Market Cap</p>
-                  <p className="font-medium truncate">${(coin.market_cap / 1e9).toFixed(2)}B</p>
+                  <p className="font-medium truncate">${((numberOrNull(coin.market_cap) ?? 0) / 1e9).toFixed(2)}B</p>
                 </div>
                 <div>
                   <p className="text-white/60">Volume (24h)</p>
-                  <p className="font-medium truncate">${(coin.total_volume / 1e9).toFixed(2)}B</p>
+                  <p className="font-medium truncate">${((numberOrNull(coin.total_volume) ?? 0) / 1e9).toFixed(2)}B</p>
                 </div>
               </div>
             </div>

@@ -1,3 +1,4 @@
+import re
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import authenticate
@@ -82,8 +83,6 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         token['last_name'] = user.last_name
         token['address'] = user.address
         token['verified'] = user.verified
-        token['wallet_name'] = user.wallet_name
-        token['wallet_number'] = user.wallet_number
         return token
 
 
@@ -118,6 +117,16 @@ class UserProfileSerializer(serializers.ModelSerializer):
     """
     Serializer for user profile data
     """
+    wallet_number = serializers.SerializerMethodField()
+    wallet_name = serializers.SerializerMethodField()
+
+    def get_wallet_number(self, obj):
+        address = obj.wallet_number or ''
+        return address if re.fullmatch(r'0x[a-fA-F0-9]{40}', address) else None
+
+    def get_wallet_name(self, obj):
+        return obj.wallet_name if self.get_wallet_number(obj) else None
+
     class Meta:
         model = User
         fields = ('id', 'email', 'first_name', 'last_name', 'address', 'verified', 'wallet_name', 'wallet_number', 'date_joined', 'last_login')
@@ -129,26 +138,32 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('id', 'email', 'first_name', 'last_name', 'address', 'verified', 'wallet_name', 'wallet_number', 'date_joined', 'last_login')
-        read_only_fields = ('id', 'email', 'date_joined', 'last_login')
+        read_only_fields = ('id', 'email', 'date_joined', 'last_login', 'verified', 'wallet_name', 'wallet_number')
 
 class WalletConnectSerializer(serializers.ModelSerializer):
     """
     Serializer for wallet connection operations
     """
+    wallet_number = serializers.RegexField(
+        regex=r'^0x[a-fA-F0-9]{40}$',
+        max_length=42,
+        error_messages={'invalid': 'Provide a public Ethereum address from your wallet.'},
+    )
+    wallet_name = serializers.CharField(max_length=100)
+
     class Meta:
         model = User
         fields = ('wallet_name', 'wallet_number')
         read_only_fields = ()
 
 
-class WalletStatusSerializer(serializers.ModelSerializer):
+class WalletStatusSerializer(UserProfileSerializer):
     """
     Serializer for wallet status information
     """
     class Meta:
         model = User
-        fields = ('wallet_name', 'wallet_number', 'is_wallet_connected')
-        read_only_fields = ('is_wallet_connected',)
+        fields = ('wallet_name', 'wallet_number')
 
 
 class TransactionSerializer(serializers.ModelSerializer):

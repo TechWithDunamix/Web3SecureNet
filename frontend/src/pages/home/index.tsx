@@ -565,7 +565,7 @@ function Home() {
             {[
               {
                 question: "How does Web3SecureNet protect my digital assets?",
-                answer: "Web3SecureNet uses military-grade encryption (AES-256) to secure your digital assets. Your private keys are encrypted and stored securely, with multiple layers of protection against unauthorized access."
+                answer: "Your wallet manages your private keys. Web3SecureNet requests only your public wallet address through your browser wallet and never asks for recovery phrases or private keys."
               },
               {
                 question: "Which blockchains does Web3SecureNet support?",

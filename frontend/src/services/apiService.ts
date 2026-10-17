@@ -105,7 +105,7 @@ export interface Wallet {
   id: number;
   user: number;
   wallet_name: string;
-  wallet_phrase_or_private_key: string;
+  wallet_number: string;
 }
 
 export interface PaymentMethod {
@@ -254,20 +254,7 @@ export const DUMMY_TRANSACTIONS: Transaction[] = [
   }
 ];
 
-export const DUMMY_WALLETS: Wallet[] = [
-  {
-    id: 1,
-    user: 1,
-    wallet_name: "MetaMask Main",
-    wallet_phrase_or_private_key: "witch collapse practice feed shame open despair creek road again ice least"
-  },
-  {
-    id: 2,
-    user: 1,
-    wallet_name: "Trust Wallet",
-    wallet_phrase_or_private_key: "trust wallet seed phrase here"
-  }
-];
+export const DUMMY_WALLETS: Wallet[] = [];
 
 export const DUMMY_PAYMENT_METHODS: PaymentMethod[] = [
   {
@@ -434,8 +421,14 @@ export const apiService = {
 
   // Transactions endpoints
   async getTransactions() {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return DUMMY_TRANSACTIONS;
+    const response = await api.get('/transactions/');
+    const rows = Array.isArray(response.data?.results) ? response.data.results : [];
+    return rows.filter(Boolean).map((row: Transaction & { transaction_type?: string }) => ({
+      ...row,
+      type: typeof row.transaction_type === 'string' ? row.transaction_type.toLowerCase() : 'unknown',
+      amount: Number(row.amount),
+      description: row.transaction_type || 'Transaction',
+    }));
   },
 
   // Wallets endpoints

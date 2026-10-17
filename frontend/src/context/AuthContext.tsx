@@ -68,6 +68,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setLoading(true);
       const response = await authAPI.login({ email, password });
 
+      if (!response?.user || typeof response.user !== 'object' ||
+          typeof response.tokens?.access !== 'string' || typeof response.tokens?.refresh !== 'string') {
+        throw new Error('The server returned an invalid login response. Please try again.');
+      }
+
       // Store tokens and user data
       apiUtils.setTokens(response.tokens.access, response.tokens.refresh);
       apiUtils.setUser(response.user);
@@ -75,7 +80,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       toast.success('Login successful!');
     } catch (error: any) {
-      toast.error(error.response?.data?.detail || 'Login failed');
+      const detail = error.response?.data?.detail;
+      toast.error(typeof detail === 'string' ? detail : error.message || 'Login failed');
       throw error;
     } finally {
       setLoading(false);
