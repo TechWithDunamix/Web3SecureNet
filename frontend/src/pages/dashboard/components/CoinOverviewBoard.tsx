@@ -30,7 +30,16 @@ export function CoinOverviewBoard({ coins }: CoinOverviewBoardProps) {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-        {topCoins.map((coin) => (
+        {topCoins.map((coin) => {
+          if (!coin || !coin.id) return null;
+          const pct = Number(coin.price_change_percentage_24h) || 0;
+          const price = Number(coin.current_price) || 0;
+          const mcap = Number(coin.market_cap) || 0;
+          const vol = Number(coin.total_volume) || 0;
+          const low = Number(coin.low_24h) || 0;
+          const high = Number(coin.high_24h) || 0;
+          const supply = Number(coin.circulating_supply) || 0;
+          return (
           <div key={coin.id} className="bg-[#0a0a1f]/50 border border-purple-500/10 rounded-lg p-3 sm:p-4 hover:border-purple-500/30 transition-colors">
             {/* Header with coin info */}
             <div className="flex items-center justify-between mb-2 sm:mb-3">
@@ -45,15 +54,15 @@ export function CoinOverviewBoard({ coins }: CoinOverviewBoardProps) {
                   <p className="text-white/60 text-xs uppercase">{coin.symbol}</p>
                 </div>
               </div>
-              <div className={`flex items-center space-x-1 flex-shrink-0 ${coin.price_change_percentage_24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                {coin.price_change_percentage_24h >= 0 ? (
+              <div className={`flex items-center space-x-1 flex-shrink-0 ${pct >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {pct >= 0 ? (
                   <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
                 ) : (
                   <TrendingDown className="w-3 h-3 sm:w-4 sm:h-4" />
                 )}
                 <span className="text-xs sm:text-sm font-medium">
-                  {coin.price_change_percentage_24h >= 0 ? '+' : ''}
-                  {coin.price_change_percentage_24h.toFixed(2)}%
+                  {pct >= 0 ? '+' : ''}
+                  {pct.toFixed(2)}%
                 </span>
               </div>
             </div>
@@ -62,15 +71,15 @@ export function CoinOverviewBoard({ coins }: CoinOverviewBoardProps) {
             <div className="space-y-1 sm:space-y-2 mb-2 sm:mb-3">
               <div className="flex justify-between items-center">
                 <span className="text-white/60 text-xs sm:text-sm">Current Price</span>
-                <span className="font-bold text-sm sm:text-lg truncate ml-2">${coin.current_price.toLocaleString()}</span>
+                <span className="font-bold text-sm sm:text-lg truncate ml-2">${price.toLocaleString()}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-white/60 text-xs sm:text-sm">Market Cap</span>
-                <span className="font-medium text-xs sm:text-sm truncate ml-2">${(coin.market_cap / 1e9).toFixed(2)}B</span>
+                <span className="font-medium text-xs sm:text-sm truncate ml-2">${(mcap / 1e9).toFixed(2)}B</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-white/60 text-xs sm:text-sm">24h Volume</span>
-                <span className="font-medium text-xs sm:text-sm truncate ml-2">${(coin.total_volume / 1e9).toFixed(2)}B</span>
+                <span className="font-medium text-xs sm:text-sm truncate ml-2">${(vol / 1e9).toFixed(2)}B</span>
               </div>
             </div>
 
@@ -79,7 +88,7 @@ export function CoinOverviewBoard({ coins }: CoinOverviewBoardProps) {
               <div className="flex justify-between items-center text-xs sm:text-sm">
                 <span className="text-white/60">24h Range</span>
                 <span className="font-medium truncate ml-2">
-                  ${coin.low_24h.toLocaleString()} - ${coin.high_24h.toLocaleString()}
+                  ${low.toLocaleString()} - ${high.toLocaleString()}
                 </span>
               </div>
             </div>
@@ -88,7 +97,7 @@ export function CoinOverviewBoard({ coins }: CoinOverviewBoardProps) {
             <div className="space-y-1 text-xs sm:text-sm">
               <div className="flex justify-between">
                 <span className="text-white/60">Circulating Supply</span>
-                <span className="font-medium truncate ml-2">{(coin.circulating_supply / 1e6).toFixed(2)}M</span>
+                <span className="font-medium truncate ml-2">{(supply / 1e6).toFixed(2)}M</span>
               </div>
               {coin.max_supply && (
                 <div className="flex justify-between">
@@ -103,7 +112,8 @@ export function CoinOverviewBoard({ coins }: CoinOverviewBoardProps) {
               <BarChart3 className="w-3 h-3 sm:w-4 sm:h-4 text-purple-400" />
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Market Summary */}
@@ -112,13 +122,13 @@ export function CoinOverviewBoard({ coins }: CoinOverviewBoardProps) {
           <div className="p-2 sm:p-3">
             <p className="text-white/60 text-xs sm:text-sm mb-1">Total Market Cap</p>
             <p className="font-bold text-sm sm:text-lg">
-              ${(coins.reduce((sum, coin) => sum + coin.market_cap, 0) / 1e12).toFixed(2)}T
+              ${(coins.reduce((sum, coin) => sum + (Number(coin?.market_cap) || 0), 0) / 1e12).toFixed(2)}T
             </p>
           </div>
           <div className="p-2 sm:p-3">
             <p className="text-white/60 text-xs sm:text-sm mb-1">24h Volume</p>
             <p className="font-bold text-sm sm:text-lg">
-              ${(coins.reduce((sum, coin) => sum + coin.total_volume, 0) / 1e12).toFixed(2)}T
+              ${(coins.reduce((sum, coin) => sum + (Number(coin?.total_volume) || 0), 0) / 1e12).toFixed(2)}T
             </p>
           </div>
           <div className="p-2 sm:p-3">

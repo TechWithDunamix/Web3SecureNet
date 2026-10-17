@@ -20,7 +20,7 @@ import { apiService, type Investment, type Transaction, type Wallet as WalletTyp
 import { OverviewSection } from './components/OverviewSection';
 import { InvestmentsSection } from './components/InvestmentsSection';
 import { TransactionsSection } from './components/TransactionsSection';
-import { WalletsSection } from './components/WalletsSection';``
+import { WalletsSection } from './components/WalletsSection';
 import { ProfileSection } from './components/ProfileSection';
 function Dashboard() {
   // Valid tab IDs - must be defined before useState that uses it

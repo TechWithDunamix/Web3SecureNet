@@ -44,10 +44,11 @@ const StatCard = ({
   };
 
   const formatValue = (val: number) => {
+    const n = Number(val) || 0;
     if (title === 'Active Investments') {
-      return val.toLocaleString();
+      return n.toLocaleString();
     }
-    return `$${val.toLocaleString(undefined, { 
+    return `$${n.toLocaleString(undefined, { 
       minimumFractionDigits: 2, 
       maximumFractionDigits: 2 
     })}`;
@@ -92,12 +93,12 @@ export function OverviewSection({ recentTransactions }: OverviewSectionProps) {
     try {
       const statsData = await apiService.getUserStats();
       setStats({
-        balance: statsData.balance,
-        total_invested: statsData.total_invested,
-        active_investments: statsData.active_investments,
-        today_earnings: statsData.today_earnings,
-        total_earnings: statsData.total_earnings,
-        potential_earnings: statsData.potential_earnings
+        balance: Number(statsData.balance) || 0,
+        total_invested: Number(statsData.total_invested) || 0,
+        active_investments: Number(statsData.active_investments) || 0,
+        today_earnings: Number(statsData.today_earnings) || 0,
+        total_earnings: Number(statsData.total_earnings) || 0,
+        potential_earnings: Number(statsData.potential_earnings) || 0
       });
     } catch (error) {
       console.error('Failed to fetch stats:', error);
@@ -241,7 +242,7 @@ export function OverviewSection({ recentTransactions }: OverviewSectionProps) {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-white/60 text-sm">Total Invested</p>
-              <p className="text-2xl font-bold">${stats.total_invested.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              <p className="text-2xl font-bold">${(Number(stats.total_invested) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
             </div>
             <div className="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center">
               <TrendingUp className="w-6 h-6 text-green-400" />

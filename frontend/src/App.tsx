@@ -4,9 +4,11 @@ import Login from './pages/login';
 import Signup from './pages/signup';
 import Dashboard from './pages/dashboard';
 import { AuthProvider } from './context/AuthContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 function App() {
   return (
+    <ErrorBoundary>
     <Router>
       <AuthProvider>
       <Routes>
@@ -17,6 +19,7 @@ function App() {
       </Routes>
       </AuthProvider>
     </Router>
+    </ErrorBoundary>
   );
 }
 
