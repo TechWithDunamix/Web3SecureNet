@@ -46,7 +46,12 @@ class CoinGeckoService {
         throw new Error(`CoinGecko API error: ${response.status}`);
       }
 
-      return await response.json();
+      const data: unknown = await response.json();
+      if (!Array.isArray(data)) throw new Error('Invalid coin market response');
+      return data.filter((coin): coin is CoinGeckoCoin =>
+        coin !== null && typeof coin === 'object' &&
+        typeof coin.id === 'string' && typeof coin.symbol === 'string' && typeof coin.name === 'string'
+      );
     } catch (error) {
       console.error('Error fetching top coins:', error);
       // Return empty array as fallback instead of throwing

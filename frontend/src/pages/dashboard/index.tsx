@@ -6,21 +6,19 @@ import {
   Wallet,
   User,
   Settings,
-  Bell,
   Search,
   Menu,
   X,
-  LogOut,
-  ChevronDown
+  LogOut
 } from 'lucide-react';
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { toast } from 'react-toastify';
 import { authAPI, apiUtils } from '../../services/api';
-import { apiService, type Investment, type Transaction, type Wallet as WalletType } from '../../services/apiService';
+import { apiService, type Transaction, type Profile } from '../../services/apiService';
+import { connectBrowserWallet } from '../../services/browserWallet';
 import { OverviewSection } from './components/OverviewSection';
 import { InvestmentsSection } from './components/InvestmentsSection';
 import { TransactionsSection } from './components/TransactionsSection';
-import { WalletsSection } from './components/WalletsSection';``
+import { WalletsSection } from './components/WalletsSection';
 import { ProfileSection } from './components/ProfileSection';
 function Dashboard() {
   // Valid tab IDs - must be defined before useState that uses it
@@ -32,33 +30,23 @@ function Dashboard() {
     const storedTab = localStorage.getItem('activeDashboardTab');
     return (storedTab && validTabs.includes(storedTab)) ? storedTab : 'overview';
   });
-  const [user, setUser] = useState<any>(null);
-  const [investments, setInvestments] = useState<Investment[]>([]);
+  const [user, setUser] = useState<Profile & { profilePicture?: string } | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [walletData, setWalletData] = useState<WalletType[]>([]);
-  const [wallets, setWallets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
-  const [manualConnectModalOpen, setManualConnectModalOpen] = useState(false);
-  const [connectingWallet, setConnectingWallet] = useState<string | null>(null);
+  const [connectingWallet, setConnectingWallet] = useState(false);
   const [walletConnected, setWalletConnected] = useState(false);
-  const [walletName, setWalletName] = useState('');
-  const [ibanNumber, setIbanNumber] = useState('');
 
   useEffect(() => {
     const loadDashboardData = async () => {
       try {
-        const [profileData, investmentsData, transactionsData, walletsData] = await Promise.all([
+        const [profileData, transactionsData] = await Promise.all([
           apiService.getProfile(),
-          apiService.getInvestments(), // Using apiService for dummy data
-          apiService.getTransactions(), // Using apiService for dummy data
-          apiService.getWallets() // Using apiService for dummy data
+          apiService.getTransactions()
         ]);
 
         setUser(profileData);
-        setInvestments(investmentsData);
         setTransactions(transactionsData);
-        setWallets(walletsData);
 
         // Check wallet status
         try {
@@ -81,8 +69,8 @@ function Dashboard() {
 
   const handleDisconnectWallet = async () => {
     try {
-      const response = await apiService.disconnectWallet();
-      setUser(response.user);
+      await apiService.disconnectWallet();
+      setUser((current) => current ? { ...current, wallet_name: '', wallet_number: '' } : null);
       setWalletConnected(false);
       toast.success('Wallet disconnected successfully!');
     } catch (error) {
@@ -91,29 +79,11 @@ function Dashboard() {
     }
   };
 
-  const handleProfileUpdate = async (updatedUser: any) => {
+  const handleProfileUpdate = async (updatedUser: Profile) => {
     setUser(updatedUser);
     // Update wallet connection status based on updated user data
     setWalletConnected(Boolean(updatedUser.wallet_name && updatedUser.wallet_number));
   };
-
-  // Calculate stats from real data
-  const stats = {
-    totalBalance: investments.reduce((sum, inv) => sum + inv.current_value, 0) + 50000, // Adding base balance
-    totalInvestments: investments.reduce((sum, inv) => sum + inv.amount, 0),
-    monthlyProfit: investments.filter(inv => inv.status === 'active').reduce((sum, inv) => sum + (inv.current_value - inv.amount), 0),
-    activeInvestments: investments.filter(inv => inv.status === 'active').length
-  };
-
-  // Navigation items
-//   const navItems = [
-//     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-//     { id: 'investments', label: 'Investments', icon: TrendingUp },
-//     { id: 'transactions', label: 'Transactions', icon: History },
-//     { id: 'wallets', label: 'Wallets', icon: Wallet },
-//     { id: 'profile', label: 'Profile', icon: User },
-//     { id: 'settings', label: 'Settings', icon: Settings },
-//   ];
 
   const renderContent = () => {
     if (loading) {
@@ -126,11 +96,11 @@ function Dashboard() {
 
     switch(activeSection) {
       case 'overview':
-        return <OverviewSection stats={stats} recentTransactions={transactions.slice(0, 3)} />;
+        return <OverviewSection recentTransactions={transactions.slice(0, 3)} />;
       case 'investments':
-        return <InvestmentsSection investments={investments} />;
+        return <InvestmentsSection userProfile={user} />;
       case 'transactions':
-        return <TransactionsSection transactions={transactions} />;
+        return <TransactionsSection />;
       case 'wallets':
         return (
           <WalletsSection 
@@ -144,7 +114,7 @@ function Dashboard() {
       case 'profile':
         return <ProfileSection user={user} onProfileUpdate={handleProfileUpdate} />;
       default:
-        return <OverviewSection stats={stats} recentTransactions={transactions.slice(0, 3)} />;
+        return <OverviewSection recentTransactions={transactions.slice(0, 3)} />;
     }
   };
 
@@ -198,104 +168,22 @@ function Dashboard() {
     }
   };
 
-//       case 'transactions':
-//         return <TransactionsSection />;
-//       case 'wallets':
-//         return <WalletsSection />;
-//       case 'profile':
-//         return <ProfileSection user={user} />;
-//       default:
-//         return <OverviewSection stats={stats} />;
-//     }
-  // Wallet connection functions
-  const fetchWallets = async () => {
+  const handleWalletConnect = async () => {
+    setConnectingWallet(true);
     try {
-      const response = await fetch('https://api.walletconnect.com/v1/wallets');
-      const data = await response.json();
-      setWallets(data);
-    } catch (error) {
-      console.error('Failed to fetch wallets:', error);
-      // Fallback wallet list for demo
-      setWallets([
-        { id: 'metamask', name: 'MetaMask', image_id: 'metamask', icon: '🦊' },
-        { id: 'walletconnect', name: 'WalletConnect', image_id: 'walletconnect', icon: '🔗' },
-        { id: 'coinbase', name: 'Coinbase Wallet', image_id: 'coinbase', icon: '🟦' },
-        { id: 'trust', name: 'Trust Wallet', image_id: 'trust', icon: '🔒' },
-        { id: 'phantom', name: 'Phantom', image_id: 'phantom', icon: '👻' },
-        { id: 'rainbow', name: 'Rainbow', image_id: 'rainbow', icon: '🌈' }
-      ]);
-    }
-  };
-
-  const handleWalletConnect = async (walletId: string) => {
-    setConnectingWallet(walletId);
-    setWalletModalOpen(false);
-
-    // Show loading toast
-    const toastId = toast.loading(`Connecting to ${walletId}...`, {
-      autoClose: 5000,
-    });
-
-    // Simulate connection process for 5 seconds
-    setTimeout(() => {
-      toast.update(toastId, {
-        render: `Failed to connect to ${walletId}. Please try again.`,
-        type: 'error',
-        isLoading: false,
-        autoClose: 3000,
-      });
-
-      setConnectingWallet(null);
-      setManualConnectModalOpen(true);
-    }, 5000);
-  };
-
-  const handleManualConnect = async () => {
-    if (!walletName.trim() || !ibanNumber.trim()) {
-      toast.error('Please fill in all fields');
-      return;
-    }
-
-    setConnectingWallet('manual');
-
-    try {
-      // Connect wallet using backend API
-      const response = await apiService.connectWallet({
-        wallet_name: walletName.trim(),
-        wallet_number: ibanNumber.trim()
-      });
-
-      // Update user data with new wallet info
+      // The browser wallet prompts for permission; only its public address is sent.
+      const wallet = await connectBrowserWallet();
+      const response = await apiService.connectWallet(wallet);
       setUser(response.user);
       setWalletConnected(true);
-
-      toast.success(`Wallet "${walletName}" connected successfully!`);
-      setManualConnectModalOpen(false);
-      setWalletName('');
-      setIbanNumber('');
-
-      // Refresh profile data
-      const updatedProfile = await apiService.getProfile();
-      setUser(updatedProfile);
-
+      setWalletModalOpen(false);
+      toast.success('Wallet address saved successfully');
     } catch (error) {
-      console.error('Failed to connect wallet:', error);
-      toast.error('Failed to connect wallet. Please try again.');
+      toast.error(error instanceof Error ? error.message : 'Unable to connect wallet');
     } finally {
-      setConnectingWallet(null);
+      setConnectingWallet(false);
     }
   };
-
-  const handleTryAgain = () => {
-    setManualConnectModalOpen(false);
-    setWalletModalOpen(true);
-  };
-
-  useEffect(() => {
-    if (walletModalOpen) {
-      fetchWallets();
-    }
-  }, [walletModalOpen]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0a0a1f] via-[#1a1a3e] to-[#0a0a1f] text-white">
@@ -424,114 +312,24 @@ function Dashboard() {
         />
       )}
 
-      {/* Wallet Selection Modal */}
       {walletModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-[#1a1a3e] border border-purple-500/30 rounded-lg p-6 w-full max-w-md">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold">Connect Wallet</h2>
-              <button
-                onClick={() => setWalletModalOpen(false)}
-                className="p-2 hover:bg-purple-500/20 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5" />
+          <div role="dialog" aria-modal="true" aria-labelledby="wallet-title" className="bg-[#1a1a3e] border border-purple-500/30 rounded-lg p-6 w-full max-w-md">
+            <h2 id="wallet-title" className="text-xl font-bold mb-4">Connect browser wallet</h2>
+            <p className="text-white/70 mb-6">
+              Approve access in your Ethereum-compatible wallet. Only your public address is saved.
+              Never enter a recovery phrase or private key on this website.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setWalletModalOpen(false)} disabled={connectingWallet} className="px-4 py-2 border border-purple-500/30 rounded-lg">Cancel</button>
+              <button onClick={handleWalletConnect} disabled={connectingWallet} className="px-4 py-2 bg-purple-600 rounded-lg disabled:opacity-50">
+                {connectingWallet ? 'Waiting for wallet...' : 'Connect browser wallet'}
               </button>
-            </div>
-
-            <div className="space-y-3">
-              {wallets.length === 0 ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="w-8 h-8 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin"></div>
-                </div>
-              ) : (
-                wallets.map((wallet: any) => (
-                  <button
-                    key={wallet.id}
-                    onClick={() => handleWalletConnect(wallet.id)}
-                    className="w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-purple-500/20 transition-colors border border-purple-500/20"
-                  >
-                    <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center text-lg">
-                      {wallet.icon}
-                    </div>
-                    <span className="font-medium">{wallet.name}</span>
-                  </button>
-                ))
-              )}
             </div>
           </div>
         </div>
       )}
 
-      {/* Manual Connection Modal */}
-      {manualConnectModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-[#1a1a3e] border border-purple-500/30 rounded-lg p-6 w-full max-w-lg">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold">Manual Wallet Connection</h2>
-              <button
-                onClick={() => setManualConnectModalOpen(false)}
-                className="p-2 hover:bg-purple-500/20 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium mb-2">Wallet Name</label>
-                <input
-                  type="text"
-                  value={walletName}
-                  onChange={(e) => setWalletName(e.target.value)}
-                  placeholder="Enter wallet name"
-                  className="w-full bg-[#0a0a1f]/50 border border-purple-500/30 rounded-lg px-4 py-3 focus:outline-none focus:border-purple-500 transition-colors"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">Wallet Phrase</label>
-                <textarea
-                  value={ibanNumber}
-                  onChange={(e) => setIbanNumber(e.target.value)}
-                  placeholder="Enter wallet Phrase (e.g., 0x8a3f2b4c9d5e1f72b6a4c9e2d8f1a0b3c5d6e7f8)"
-                  rows={4}
-                  className="w-full bg-[#0a0a1f]/50 border border-purple-500/30 rounded-lg px-4 py-3 focus:outline-none focus:border-purple-500 transition-colors resize-none"
-                />
-                <p className="text-xs text-gray-400 mt-1">Enter a valid allet Phrase  for your wallet connection</p>
-              </div>
-
-              <div className="flex space-x-3">
-                <button
-                  onClick={handleTryAgain}
-                  className="flex-1 px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded-lg transition-colors"
-                >
-                  Try Again
-                </button>
-                <button
-                  onClick={handleManualConnect}
-                  className="flex-1 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors"
-                >
-                  Connect Manually
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Toast Container */}
-      <ToastContainer
-        position="top-right"
-        autoClose={5000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="dark"
-      />
     </div>
   );
 }
